@@ -184,7 +184,6 @@ end
 
 -- Public interface ------------------------------------------------------
 
--- module.types = _makeConstantsTable(module.types)
 module.roles                   = _makeConstantsTable(module.roles)
 module.subroles                = _makeConstantsTable(module.subroles)
 module.parameterizedAttributes = _makeConstantsTable(module.parameterizedAttributes)
