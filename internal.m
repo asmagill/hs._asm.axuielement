@@ -142,16 +142,55 @@ static int pushCFTypeHamster(lua_State *L, CFTypeRef theItem, NSMutableDictionar
         } else {
             lua_pushfstring(L, "unrecognized value type (%p)", theItem) ;
         }
-    } else if (theType == CFAttributedStringGetTypeID()) [skin pushNSObject:(__bridge NSAttributedString *)theItem] ;
-      else if (theType == CFNullGetTypeID())             [skin pushNSObject:(__bridge NSNull *)theItem] ;
-      else if (theType == CFBooleanGetTypeID() || theType == CFNumberGetTypeID())
-                                                         [skin pushNSObject:(__bridge NSNumber *)theItem] ;
-      else if (theType == CFDataGetTypeID())             [skin pushNSObject:(__bridge NSData *)theItem] ;
-      else if (theType == CFDateGetTypeID())             [skin pushNSObject:(__bridge NSDate *)theItem] ;
-      else if (theType == CFStringGetTypeID())           [skin pushNSObject:(__bridge NSString *)theItem] ;
-      else if (theType == CFURLGetTypeID())              [skin pushNSObject:(__bridge_transfer NSString *)CFRetain(CFURLGetString(theItem))] ;
-      else if (theType == AXUIElementGetTypeID())        pushAXUIElement(L, theItem) ;
-      else {
+    } else if (theType == CFAttributedStringGetTypeID()) {
+        [skin pushNSObject:(__bridge NSAttributedString *)theItem] ;
+    } else if (theType == CFNullGetTypeID()) {
+        [skin pushNSObject:(__bridge NSNull *)theItem] ;
+    } else if (theType == CFBooleanGetTypeID() || theType == CFNumberGetTypeID()) {
+        [skin pushNSObject:(__bridge NSNumber *)theItem] ;
+    } else if (theType == CFDataGetTypeID()) {
+        [skin pushNSObject:(__bridge NSData *)theItem] ;
+    } else if (theType == CFDateGetTypeID()) {
+        [skin pushNSObject:(__bridge NSDate *)theItem] ;
+    } else if (theType == CFStringGetTypeID()) {
+        [skin pushNSObject:(__bridge NSString *)theItem] ;
+    } else if (theType == CFURLGetTypeID()) {
+        [skin pushNSObject:(__bridge_transfer NSString *)CFRetain(CFURLGetString(theItem))] ;
+    } else if (theType == AXUIElementGetTypeID()) {
+        pushAXUIElement(L, theItem) ;
+// Thought I'd found the missing framework, but apparently not
+//     } else if (theType == wkGetAXTextMarkerTypeID()) {
+//         lua_newtable(L) ;
+//         struct TextMarkerData textMarkerData ;
+//         BOOL valid = wkGetBytesFromAXTextMarker(theItem, &textMarkerData, sizeof(textMarkerData)) ;
+//         lua_pushboolean(L, (BOOL)valid) ; lua_setfield(L, -2, "valid") ;
+//         if (valid) {
+//             lua_pushinteger(L, textMarkerData.axID) ; lua_setfield(L, -2, "axID") ;
+// //             Node* node;
+//             lua_pushinteger(L, textMarkerData.offset) ; lua_setfield(L, -2, "offset") ;
+//             lua_pushinteger(L, textMarkerData.characterStartIndex) ; lua_setfield(L, -2, "characterStartIndex") ;
+//             lua_pushinteger(L, textMarkerData.characterOffset) ; lua_setfield(L, -2, "characterOffset") ;
+//             lua_pushboolean(L, textMarkerData.ignored) ; lua_setfield(L, -2, "ignored") ;
+//             switch(textMarkerData.affinity) {
+//                 case UPSTREAM:   lua_pushstring(L, "upstream") ; break ;
+//                 case DOWNSTREAM: lua_pushstring(L, "downstream") ; break ;
+//                 default:
+//                     [skin pushNSObject:[NSString stringWithFormat:@"unrecognized affinity value:%d, notify developers", textMarkerData.affinity]] ;
+//                     break ;
+//             }
+//             lua_setfield(L, -2, "affinity") ;
+//         }
+//     } else if (theType == wkGetAXTextMarkerRangeTypeID()) {
+//         lua_newtable(L) ;
+//         CFTypeRef startRange = wkCopyAXTextMarkerRangeStart(theItem) ;
+//         pushCFTypeHamster(L, startRange, alreadySeen) ;
+//         lua_setfield(L, -2, "start") ;
+//         if (startRange) CFRelease(startRange) ;
+//         CFTypeRef rangeEnd = wkCopyAXTextMarkerRangeEnd(theItem) ;
+//         pushCFTypeHamster(L, rangeEnd, alreadySeen) ;
+//         lua_setfield(L, -2, "end") ;
+//         if (rangeEnd) CFRelease(rangeEnd) ;
+    } else {
           NSString *typeLabel = [NSString stringWithFormat:@"unrecognized type: %lu", theType] ;
           [skin logWarn:[NSString stringWithFormat:@"%s:%@", USERDATA_TAG, typeLabel]];
           lua_pushstring(L, [typeLabel UTF8String]) ;
@@ -577,6 +616,49 @@ static int getAttributeValue(lua_State *L) {
         errorWrapper(L, @"attributeValue", attribute, errorState) ;
     }
     if (value) CFRelease(value) ;
+    return 1 ;
+}
+
+/// hs._asm.axuielement:allAttributeValues([includeErrors]) -> table
+/// Method
+/// Returns a table containing key-value pairs for all attributes of the accessibility object.
+///
+/// Parameters:
+///  * `includeErrors` - an optional boolean, default false, that specifies whether attribute names which generate an error when retrieved are included in the returned results.
+///
+/// Returns:
+///  * a table with key-value pairs corresponding to the attributes of the accessibility object.
+static int getAllAttributeValues(lua_State *L) {
+    LuaSkin *skin = [LuaSkin shared] ;
+    [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBOOLEAN | LS_TOPTIONAL, LS_TBREAK] ;
+    AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
+    BOOL includeErrors = lua_gettop(L) == 2 ? (BOOL)lua_toboolean(L, 2) : NO ;
+    CFArrayRef attributeNames ;
+    AXError errorState = AXUIElementCopyAttributeNames(theRef, &attributeNames) ;
+    if (errorState == kAXErrorSuccess) {
+        CFArrayRef values ;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wassign-enum"
+        errorState = AXUIElementCopyMultipleAttributeValues(theRef, attributeNames, 0, &values) ;
+#pragma clang diagnostic pop
+        if (errorState == kAXErrorSuccess) {
+            lua_newtable(L) ;
+            for(CFIndex idx = 0 ; idx < CFArrayGetCount(attributeNames) ; idx++) {
+                CFTypeRef item = CFArrayGetValueAtIndex(values, idx) ;
+                if ((CFGetTypeID(item) == AXValueGetTypeID()) && (AXValueGetType((AXValueRef)item) == kAXValueAXErrorType)) {
+                    if (!includeErrors) continue ;
+                }
+                pushCFTypeToLua(L, item) ;
+                lua_setfield(L, -2, [(__bridge NSString *)CFArrayGetValueAtIndex(attributeNames, idx) UTF8String]) ;
+            }
+        } else {
+            errorWrapper(L, @"allAttributeValues", @"retrieving attribute values", errorState) ;
+        }
+        if (values) CFRelease(values) ;
+    } else {
+        errorWrapper(L, @"allAttributeValues", @"retrieving attribute names", errorState) ;
+    }
+    if (attributeNames) CFRelease(attributeNames) ;
     return 1 ;
 }
 
@@ -1372,6 +1454,7 @@ static int userdata_eq(lua_State* L) {
 // Metatable for userdata objects
 static const luaL_Reg userdata_metaLib[] = {
     {"attributeNames",              getAttributeNames},
+    {"allAttributeValues",          getAllAttributeValues},
     {"parameterizedAttributeNames", getParameterizedAttributeNames},
     {"actionNames",                 getActionNames},
     {"actionDescription",           getActionDescription},
@@ -1393,12 +1476,29 @@ static const luaL_Reg userdata_metaLib[] = {
     {NULL,                          NULL}
 } ;
 
+// static int textMarkerTesting(lua_State *L) {
+//     LuaSkin *skin = [LuaSkin shared] ;
+//     int returns = 2 ;
+// #pragma clang diagnostic push
+// #pragma clang diagnostic ignored "-Wformat-pedantic"
+//     [skin pushNSObject:[NSString stringWithFormat:@"wkGetAXTextMarkerTypeID == %p", wkGetAXTextMarkerTypeID]] ;
+//     [skin pushNSObject:[NSString stringWithFormat:@"wkGetAXTextMarkerRangeTypeID == %p", wkGetAXTextMarkerRangeTypeID]] ;
+// #pragma clang diagnostic pop
+//     if (&wkGetAXTextMarkerTypeID && &wkGetAXTextMarkerRangeTypeID) {
+//         lua_pushinteger(L, (lua_Integer)wkGetAXTextMarkerTypeID()) ;
+//         lua_pushinteger(L, (lua_Integer)wkGetAXTextMarkerRangeTypeID()) ;
+//         returns = 4 ;
+//     }
+//     return returns ;
+// }
+
 // Functions for returned object when module loads
 static luaL_Reg moduleLib[] = {
     {"systemWideElement",        getSystemWideElement},
     {"windowElement",            getWindowElement},
     {"applicationElement",       getApplicationElement},
     {"applicationElementForPID", getApplicationElementForPID},
+//     {"textMarker",               textMarkerTesting},
 
     {NULL,                       NULL}
 } ;

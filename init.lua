@@ -1,3 +1,20 @@
+--
+--
+-- Search
+--
+--     { { criteria }, ... }
+--
+--     Breadth first search of children elements
+--     On a match of criteria 1, remember location
+--         start search for criteria 2 with children of match
+--         etc.
+--         if found, return/store result
+--         pop up a level and continue search if not found when last criteria checked or multiple results requested
+--
+--
+
+
+
 --- === hs._asm.axuielement ===
 ---
 --- This module allows you to access the accessibility objects of running applications, their windows, menus, and other user interface elements that support the OS X accessibility API.
@@ -35,7 +52,9 @@ local fnutils = require("hs.fnutils")
 
 require("hs.styledtext")
 
-local object = hs.getObjectMetatable(USERDATA_TAG)
+local objectMT = hs.getObjectMetatable(USERDATA_TAG)
+
+local parentLabels = { module.attributes.general.parent, module.attributes.general.topLevelUIElement }
 
 -- private variables and methods -----------------------------------------
 
@@ -122,20 +141,20 @@ elementSearchHamster = function(element, searchParameters, isPattern, includePar
 
 -- check an AXUIElement and its attributes
 
-    if getmetatable(element) == hs.getObjectMetatable(USERDATA_TAG) then
+    if getmetatable(element) == objectMT then
         if fnutils.find(seen, function(_) return _ == element end) then return results end
         table.insert(seen, element)
 
     -- first check if this element itself belongs in the result set
-        if object.matches(element, searchParameters, isPattern) then
+        if objectMT.matches(element, searchParameters, isPattern) then
             table.insert(results, element)
         end
 
     -- now check any of it's attributes and if they are a userdata, check them
-        for i, v in ipairs(object.attributeNames(element) or {}) do
-            if (v ~= module.attributes.general.parent and v ~= module.attributes.general.topLevelUIElement) or includeParents then
-                local value = object.attributeValue(element, v)
-                if  type(value) == "table" or getmetatable(value) == hs.getObjectMetatable(USERDATA_TAG) then
+        for i, v in ipairs(objectMT.attributeNames(element) or {}) do
+            if not fnutils.contains(parentLabels, v) or includeParents then
+                local value = objectMT.attributeValue(element, v)
+                if  type(value) == "table" or getmetatable(value) == objectMT then
                     local tempResults = elementSearchHamster(value, searchParameters, isPattern, includeParents, seen)
                     if #tempResults > 0 then
                         for i2, v2 in ipairs(tempResults) do -- flatten; we'll cull duplicates later
@@ -149,7 +168,7 @@ elementSearchHamster = function(element, searchParameters, isPattern, includePar
 -- iterate over any table that has been passed in
     elseif type(element) == "table" then
         for i, v in ipairs(element) do
-            if  type(v) == "table" or getmetatable(v) == hs.getObjectMetatable(USERDATA_TAG) then
+            if  type(v) == "table" or getmetatable(v) == objectMT then
                 local tempResults = elementSearchHamster(v, searchParameters, isPattern, includeParents, seen)
                 if #tempResults > 0 then
                     for i2, v2 in ipairs(tempResults) do -- flatten; we'll cull duplicates later
@@ -213,10 +232,10 @@ end
 
 -- build up the "correct" object metatable methods
 
-object.__index = function(self, _)
+objectMT.__index = function(self, _)
     if type(_) == "string" then
         -- take care of the internally defined items first so we can get out of here quickly if its one of them
-        if object[_] then return object[_] end
+        if objectMT[_] then return objectMT[_] end
 
         -- Now for the dynamically generated methods...
 
@@ -230,9 +249,9 @@ object.__index = function(self, _)
         if _:match("^set") then
 
              -- check attributes
-             for i, v in ipairs(object.attributeNames(self) or {}) do
-                if v == formalName and object.isAttributeSettable(self, formalName) then
-                    return function(self, ...) return object.setAttributeValue(self, formalName, ...) end
+             for i, v in ipairs(objectMT.attributeNames(self) or {}) do
+                if v == formalName and objectMT.isAttributeSettable(self, formalName) then
+                    return function(self, ...) return objectMT.setAttributeValue(self, formalName, ...) end
                 end
             end
 
@@ -240,9 +259,9 @@ object.__index = function(self, _)
         elseif _:match("^do") then
 
             -- check actions
-            for i, v in ipairs(object.actionNames(self) or {}) do
+            for i, v in ipairs(objectMT.actionNames(self) or {}) do
                 if v == formalName then
-                    return function(self, ...) return object.performAction(self, formalName, ...) end
+                    return function(self, ...) return objectMT.performAction(self, formalName, ...) end
                 end
             end
 
@@ -250,16 +269,16 @@ object.__index = function(self, _)
         else
 
             -- check attributes
-            for i, v in ipairs(object.attributeNames(self) or {}) do
+            for i, v in ipairs(objectMT.attributeNames(self) or {}) do
                 if v == formalName then
-                    return function(self, ...) return object.attributeValue(self, formalName, ...) end
+                    return function(self, ...) return objectMT.attributeValue(self, formalName, ...) end
                 end
             end
 
             -- check paramaterizedAttributes
-            for i, v in ipairs(object.parameterizedAttributeNames(self) or {}) do
+            for i, v in ipairs(objectMT.parameterizedAttributeNames(self) or {}) do
                 if v == formalName then
-                    return function(self, ...) return object.parameterizedAttributeValue(self, formalName, ...) end
+                    return function(self, ...) return objectMT.parameterizedAttributeValue(self, formalName, ...) end
                 end
             end
         end
@@ -267,7 +286,7 @@ object.__index = function(self, _)
         -- guess it doesn't exist
         return nil
     elseif type(_) == "number" then
-        local children = object.attributeValue(self, "AXChildren")
+        local children = objectMT.attributeValue(self, "AXChildren")
         if children then
             return children[_]
         else
@@ -278,8 +297,8 @@ object.__index = function(self, _)
     end
 end
 
-object.__call = function(_, cmd, ...)
-    local fn = object.__index(_, cmd)
+objectMT.__call = function(_, cmd, ...)
+    local fn = objectMT.__index(_, cmd)
     if fn and type(fn) == "function" then
         return fn(_, ...)
     elseif fn then
@@ -289,26 +308,26 @@ object.__call = function(_, cmd, ...)
     end
 end
 
-object.__pairs = function(_)
+objectMT.__pairs = function(_)
     local keys = {}
 
      -- getters and setters for attributeNames
-    for i, v in ipairs(object.attributeNames(_) or {}) do
+    for i, v in ipairs(objectMT.attributeNames(_) or {}) do
         local partialName = v:match("^AX(.*)")
         keys[partialName:sub(1,1):lower() .. partialName:sub(2)] = true
-        if object.isAttributeSettable(_, v) then
+        if objectMT.isAttributeSettable(_, v) then
             keys["set" .. partialName] = true
         end
     end
 
     -- getters for paramaterizedAttributes
-    for i, v in ipairs(object.parameterizedAttributeNames(_) or {}) do
+    for i, v in ipairs(objectMT.parameterizedAttributeNames(_) or {}) do
         local partialName = v:match("^AX(.*)")
         keys[partialName:sub(1,1):lower() .. partialName:sub(2) .. "WithParameter"] = true
     end
 
     -- doers for actionNames
-    for i, v in ipairs(object.actionNames(_) or {}) do
+    for i, v in ipairs(objectMT.actionNames(_) or {}) do
         local partialName = v:match("^AX(.*)")
         keys["do" .. partialName] = true
     end
@@ -321,8 +340,8 @@ object.__pairs = function(_)
         end, _, nil
 end
 
-object.__len = function(self)
-    local children = object.attributeValue(self, "AXChildren")
+objectMT.__len = function(self)
+    local children = objectMT.attributeValue(self, "AXChildren")
     if children then
         return #children
     else
@@ -342,7 +361,7 @@ end
 ---
 --- Notes:
 ---  * the dynamically generated methods are described more fully in the reference documentation header, but basically provide shortcuts for getting and setting attribute values as well as perform actions supported by the Accessibility object the axuielementObject represents.
-object.dynamicMethods = function(self, asKV)
+objectMT.dynamicMethods = function(self, asKV)
     local results = {}
     for k, v in pairs(self) do
         if asKV then
@@ -378,17 +397,17 @@ end
 ---        * Put another way: key-value pairs are "and'ed" together while the values for a specific key-value pair are "or'ed" together.
 ---
 ---  * This method is used by [hs._asm.axuielement:elementSearch](#elementSearch) to determine if the given object should be included it's result set.  As an optimization for the `elementSearch` method, the keys in the `matchCriteria` table may be provided as a function which takes one argument (the axuielementObject to query).  The return value of this function will be compared against the value(s) of the key-value pair as described above.  This is done to prevent dynamically re-creating the query for each comparison when the search set is large.
-object.matches = function(self, searchParameters, isPattern)
+objectMT.matches = function(self, searchParameters, isPattern)
     isPattern = isPattern or false
     if type(searchParameters) == "string" or #searchParameters > 0 then searchParameters = { role = searchParameters } end
     local answer = nil
-    if getmetatable(self) == hs.getObjectMetatable(USERDATA_TAG) then
+    if getmetatable(self) == objectMT then
         answer = true
         for k, v in pairs(searchParameters) do
             local testFn = nil
             if type(k) == "string" then
                 local formalName = k:match("^AX[%w%d_]+$") and k or "AX"..k:sub(1,1):upper()..k:sub(2)
-                testFn = function(self) return object.attributeValue(self, formalName) end
+                testFn = function(self) return objectMT.attributeValue(self, formalName) end
             elseif type(k) == "function" then
                 testFn = k
             else
@@ -403,7 +422,7 @@ object.matches = function(self, searchParameters, isPattern)
                     if type(v2) == type(result) then
                         if type(v2) == "string" then
                             partialAnswer = partialAnswer or (not isPattern and result == v2) or (isPattern and (type(result) == "string") and result:match(v2))
-                        elseif type(v2) == "number" or type(v2) == "boolean" or getmetatable(v2) == hs.getObjectMetatable(USERDATA_TAG) then
+                        elseif type(v2) == "number" or type(v2) == "boolean" or getmetatable(v2) == objectMT then
                             partialAnswer = partialAnswer or (result == v2)
                         else
                             local dbg = debug.getinfo(2)
@@ -460,7 +479,7 @@ end
 ---     print(hs.inspect(v:frame()))
 --- end
 --- ~~~
-object.elementSearch = function(self, searchParameters, isPattern, includeParents)
+objectMT.elementSearch = function(self, searchParameters, isPattern, includeParents)
     isPattern = isPattern or false
     includeParents = includeParents or false
     if type(searchParameters) == "string" or #searchParameters > 0 then searchParameters = { role = searchParameters } end
@@ -470,7 +489,7 @@ object.elementSearch = function(self, searchParameters, isPattern, includeParent
     local spHolder = {}
     for k, v in pairs(searchParameters) do
         local formalName = k:match("^AX[%w%d_]+$") and k or "AX"..k:sub(1,1):upper()..k:sub(2)
-        spHolder[function(self) return object.attributeValue(self, formalName) end] = v
+        spHolder[function(self) return objectMT.attributeValue(self, formalName) end] = v
     end
     searchParameters = spHolder
     local results = {}
@@ -478,7 +497,7 @@ object.elementSearch = function(self, searchParameters, isPattern, includeParent
         results = elementSearchHamster(self, searchParameters, isPattern, includeParents)
     else
         for i,v in ipairs(self) do
-            if object.matches(v, searchParameters, isPattern) then
+            if objectMT.matches(v, searchParameters, isPattern) then
                 table.insert(results, v)
             end
         end
@@ -487,10 +506,66 @@ object.elementSearch = function(self, searchParameters, isPattern, includeParent
     return setmetatable(results, hs.getObjectMetatable(USERDATA_TAG .. ".elementSearchTable"))
 end
 
+objectMT.path = function(self)
+    local results, current = { self }, self
+    while current:attributeValue("AXParent") do
+        current = current("parent")
+        table.insert(results, 1, current)
+    end
+    return results
+end
+
+local buildTreeHamster
+buildTreeHamster = function(self, depth, withParents, seen)
+    if depth == 0 then return "** max depth exceeded" end
+    seen  = seen or {}
+    if getmetatable(self) == objectMT then
+        local seenBefore = fnutils.find(seen, function(_) return _._element == self end)
+        if seenBefore then return seenBefore end
+        local thisObject = self:allAttributeValues()
+        thisObject._element = self
+        seen[self] = thisObject
+        for k, v in pairs(thisObject) do
+            if k ~= "_element" then
+                if (type(v) == "table" and #v > 0) then
+                    thisObject[k] = buildTreeHamster(v, depth, withParents, seen)
+                elseif getmetatable(v) == objectMT then
+                    if not withParents and fnutils.contains(parentLabels, k) then
+                    -- not diving into parents, but lets see if we've seen them already...
+                        thisObject[k] = fnutils.find(seen, function(_) return _._element == v end) or v
+                    else
+                        thisObject[k] = buildTreeHamster(v, depth - 1, withParents, seen)
+                    end
+                end
+            end
+        end
+        return thisObject
+    elseif type(self) == "table" then
+        local results = {}
+        for i,v in ipairs(self) do
+            if (type(v) == "table" and #v > 0) or getmetatable(v) == objectMT then
+                results[i] = buildTreeHamster(v, depth - 1, withParents, seen)
+            else
+                results[i] = v
+            end
+        end
+        return results
+    end
+    return self
+end
+
+objectMT.buildTree = function(self, depth, withParents)
+    if type(depth) == "boolean" and type(withParents) == "nil" then
+        depth, withParents = nil, depth
+    end
+    depth = depth or math.huge
+    return buildTreeHamster(self, depth, withParents)
+end
+
 -- store this in the registry so we can easily set it both from Lua and from C functions
 debug.getregistry()[USERDATA_TAG .. ".elementSearchTable"] = {
     __type  = USERDATA_TAG .. ".elementSearchTable",
-    __index = { elementSearch = object.elementSearch },
+    __index = { elementSearch = objectMT.elementSearch },
     __tostring = function(_)
         local results = ""
         for i, v in ipairs(_) do results = results..string.format("%d\t%s\n", i, tostring(v)) end
