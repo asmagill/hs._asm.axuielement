@@ -192,7 +192,7 @@ static int pushCFTypeHamster(lua_State *L, CFTypeRef theItem, NSMutableDictionar
 //         if (rangeEnd) CFRelease(rangeEnd) ;
     } else {
           NSString *typeLabel = [NSString stringWithFormat:@"unrecognized type: %lu", theType] ;
-          [skin logWarn:[NSString stringWithFormat:@"%s:%@", USERDATA_TAG, typeLabel]];
+          [skin logDebug:[NSString stringWithFormat:@"%s:%@", USERDATA_TAG, typeLabel]];
           lua_pushstring(L, [typeLabel UTF8String]) ;
       }
     return 1 ;
@@ -365,17 +365,17 @@ static CFTypeRef lua_toCFTypeHamster(lua_State *L, int idx, NSMutableDictionary 
               }
             }
         } else if (theType == LUA_TUSERDATA) {
-            if (luaL_testudata(L, -1, "hs.styledtext")) {
-                value = (__bridge_retained CFAttributedStringRef)[skin toNSObjectAtIndex:-1] ;
-            } else if (luaL_testudata(L, -1, USERDATA_TAG)) {
-                value = CFRetain(get_axuielementref(L, 1, USERDATA_TAG)) ;
+            if (luaL_testudata(L, index, "hs.styledtext")) {
+                value = (__bridge_retained CFAttributedStringRef)[skin toNSObjectAtIndex:index] ;
+            } else if (luaL_testudata(L, index, USERDATA_TAG)) {
+                value = CFRetain(get_axuielementref(L, index, USERDATA_TAG)) ;
             } else {
-                lua_pop(L, -1) ;
+                lua_pop(L, 1) ;
                 [skin logError:[NSString stringWithFormat:@"%s:unrecognized userdata is not supported for conversion", USERDATA_TAG]] ;
                 return kCFNull ;
             }
         } else if (theType != LUA_TNIL) { // value already set to kCFNull, no specific match necessary
-            lua_pop(L, -1) ;
+            lua_pop(L, 1) ;
             [skin logError:[NSString stringWithFormat:@"%s:type %s not supported for conversion", USERDATA_TAG, lua_typename(L, theType)]] ;
             return kCFNull ;
         }
@@ -499,6 +499,26 @@ static int getApplicationElementForPID(lua_State *L) {
 }
 
 #pragma mark - Module Methods
+
+/// hs._asm.axuielement:copy() -> axuielementObject
+/// Method
+/// Return a duplicate userdata reference to the Accessibility object.
+///
+/// Parameters:
+///  * None
+///
+/// Returns:
+///  * a new userdata object representing a new reference to the Accessibility object.
+///
+/// Notes:
+///  * The new userdata will have no search state information attached to it, and is used internally by [hs._asm.axuielement:searchPath](#searchPath).
+static int duplicateReference(lua_State *L) {
+    LuaSkin *skin = [LuaSkin shared] ;
+    [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ;
+    AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
+    pushAXUIElement(L, theRef) ;
+    return 1 ;
+}
 
 /// hs._asm.axuielement:attributeNames() -> table
 /// Method
@@ -1469,6 +1489,7 @@ static const luaL_Reg userdata_metaLib[] = {
     {"getAllChildElements",         getAllAXUIElements},
     {"asHSWindow",                  axuielementToWindow},
     {"asHSApplication",             axuielementToApplication},
+    {"copy",                        duplicateReference},
 
     {"__tostring",                  userdata_tostring},
     {"__eq",                        userdata_eq},
