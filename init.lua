@@ -1,19 +1,3 @@
---
---
--- Search
---
---     { { criteria }, ... }
---
---     Breadth first search of children elements
---     On a match of criteria 1, remember location
---         start search for criteria 2 with children of match
---         etc.
---         if found, return/store result
---         pop up a level and continue search if not found when last criteria checked or multiple results requested
---
---
-
-
 
 --- === hs._asm.axuielement ===
 ---
@@ -142,7 +126,7 @@ elementSearchHamster = function(element, searchParameters, isPattern, includePar
 -- check an AXUIElement and its attributes
 
     if getmetatable(element) == objectMT then
-        if fnutils.find(seen, function(_) return _ == element end) then return results end
+        if fnutils.contains(seen, element) then return results end
         table.insert(seen, element)
 
     -- first check if this element itself belongs in the result set
@@ -522,7 +506,7 @@ buildTreeHamster = function(self, depth, withParents, seen)
     if getmetatable(self) == objectMT then
         local seenBefore = fnutils.find(seen, function(_) return _._element == self end)
         if seenBefore then return seenBefore end
-        local thisObject = self:allAttributeValues()
+        local thisObject = self:allAttributeValues() or {}
         thisObject._element = self
         seen[self] = thisObject
         for k, v in pairs(thisObject) do
@@ -560,6 +544,186 @@ objectMT.buildTree = function(self, depth, withParents)
     end
     depth = depth or math.huge
     return buildTreeHamster(self, depth, withParents)
+end
+
+objectMT.matchesCriteria = function(self, searchParameters, isPattern)
+    isPattern = isPattern or false
+    if type(searchParameters) == "string" or #searchParameters > 0 then searchParameters = { role = searchParameters } end
+    local answer = nil
+    if getmetatable(self) == objectMT then
+        answer = true
+        local values = self:allAttributeValues() or {}
+        for k, v in pairs(searchParameters) do
+            if not k:match("^_") then -- skip possible meta parameters
+                local formalName = k:match("^AX[%w%d_]+$") and k or "AX"..k:sub(1,1):upper()..k:sub(2)
+                local result = values[formalName]
+                if type(v) ~= "table" then v = { v } end
+                local partialAnswer = false
+                for i2, v2 in ipairs(v) do
+                    if type(v2) == type(result) then
+                        if type(v2) == "string" then
+                            partialAnswer = partialAnswer or (not isPattern and result == v2) or (isPattern and (type(result) == "string") and result:match(v2))
+                        elseif type(v2) == "number" or type(v2) == "boolean" or getmetatable(v2) == objectMT then
+                            partialAnswer = partialAnswer or (result == v2)
+                        else
+                            local dbg = debug.getinfo(2)
+                            log.wf("%s:%d: unable to compare type '%s' in searchParameters", dbg.short_src, dbg.currentline, type(v2))
+                        end
+                    end
+                    if partialAnswer then break end
+                end
+                answer = partialAnswer
+                if not answer then break end
+            end
+        end
+    end
+    return answer
+end
+
+local searchPathHamster = function(self, levelCriteria, levelDepth, withParents)
+    local attached = debug.getuservalue(self) or {}
+    local seen = attached.seen or {}
+    local searchables = attached.searchables or { { self, 0 } }
+    local found, haveWarnedAlready = false, false
+    local count = levelCriteria._count or 1
+    local addToParentIgnoreList = {}
+
+    while #searchables > 0 and not found do
+        local current = table.remove(searchables, 1)
+        local element = current[1]
+        if not fnutils.contains(seen, element) then
+            table.insert(seen, element)
+            if element:matchesCriteria(levelCriteria, levelCriteria._pattern) then
+                count = count - 1
+                table.insert(addToParentIgnoreList, element)
+                if count == 0 then found = element end -- allow for "selecting the 2nd found", useful for arrays
+            end
+            -- go ahead and attach these even if found in case we're called again
+            local newDepth = current[2] + 1
+            if newDepth > levelDepth then
+                if not haveWarnedAlready then
+                    haveWarnedAlready = true
+                    log.d("** max depth exceeded")
+                end
+            else
+                local values = element:allAttributeValues() or {}
+                for k,v in pairs(values) do
+                    if not fnutils.contains(parentLabels, k) or withParents then
+                        if getmetatable(v) == objectMT then
+                            if not fnutils.contains(seen, v) then
+                                table.insert(searchables, { v, newDepth })
+                            end
+                        elseif type(v) == "table" and #v > 0 then
+                            for i, v2 in ipairs(v) do
+                                if getmetatable(v2) == objectMT then
+                                    if not fnutils.contains(seen, v2) then
+                                        table.insert(searchables, { v2, newDepth })
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    -- so I don't waste time changing this again -- we attached the currently seen and remaining searchables
+    -- to the element which started the search, not the result of the search... :next will pop the last result
+    -- for us since we shouldn't search deeper then the last criterion
+    local uservalue = debug.getuservalue(self) or {}
+    uservalue.seen        = seen
+    uservalue.searchables = searchables
+    debug.setuservalue(self, uservalue)
+    return found, addToParentIgnoreList
+end
+
+local simpleCopy
+simpleCopy = function(el, seen)
+    seen = seen or {}
+    local new
+    if type(el) == "table" then
+        new = seen[el]
+        if not new then
+            new = {}
+            seen[el] = new
+            for k, v in pairs(el) do
+                new[k] = simpleCopy(v, seen)
+            end
+        end
+    else
+        new = el
+    end
+    return new
+end
+
+local searchPathWrapper = function(self, criteria, depth, withParents, path, criteriaSeen)
+    local position = path and #criteria or 1
+    path = path or { self:copy() }
+    local failed = false
+
+    if not criteriaSeen then
+        criteriaSeen = {}
+        criteria = simpleCopy(criteria) -- in case the table is being used outside of us, we want to capture it's state *now* for :next
+        for i, v in ipairs(criteria) do criteriaSeen[v] = {} end
+    end
+
+    while not failed and position <= #criteria do
+        local element = path[#path]
+        local levelCriteria = criteria[position]
+        log.vf("push:%s", element:role())
+        local step, thingsToIgnore = searchPathHamster(element, levelCriteria, levelCriteria._depth or depth, withParents)
+        if step then
+            if not fnutils.contains(criteriaSeen[levelCriteria], step) then
+                for i, v in ipairs(thingsToIgnore) do table.insert(criteriaSeen[levelCriteria], v) end
+                table.insert(path, step)
+                position = position + 1
+            else
+                step = nil
+            end
+        end
+        if not step then
+            log.vf("pop: %s", element:role()) ;
+            table.remove(path)
+            position = position - 1
+            if position == 0 then
+                failed = true
+            end
+        end
+    end
+
+    local found = not failed and path[#path] or nil
+    if found then
+        local uservalue = debug.getuservalue(found) or {}
+        uservalue.path         = path
+        uservalue.criteria     = criteria
+        uservalue.depth        = depth
+        uservalue.withParents  = withParents
+        uservalue.criteriaSeen = criteriaSeen
+        debug.setuservalue(found, uservalue)
+    end
+    return found
+end
+
+objectMT.searchPath = function(self, criteria, depth, withParents)
+    debug.setuservalue(self, nil) -- this is a brand new search, so clear anything that may remain
+    criteria = criteria or {}
+    if type(criteria) == "string" then criteria = { criteria } end
+    if #criteria == 0 then criteria = { criteria } end
+    if type(depth) == "boolean" and type(withParents) == "nil" then
+        depth, withParents = nil, depth
+    end
+    depth = depth or math.huge
+    return searchPathWrapper(self, criteria, depth, withParents)
+end
+
+objectMT.next = function(self)
+    local uservalue = debug.getuservalue(self)
+    if uservalue then
+        table.remove(uservalue.path) -- we've already been found, so... pop us from the path
+        return searchPathWrapper(self, uservalue.criteria, uservalue.depth, uservalue.withParents, uservalue.path, uservalue.criteriaSeen)
+    else
+        error("object does not possess search state information", 2)
+    end
 end
 
 -- store this in the registry so we can easily set it both from Lua and from C functions
