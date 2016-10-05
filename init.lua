@@ -33,6 +33,7 @@ local log          = require("hs.logger").new(USERDATA_TAG,"warning")
 module.log         = log
 
 local fnutils = require("hs.fnutils")
+local inspect = require("hs.inspect")
 
 require("hs.styledtext")
 
@@ -580,10 +581,35 @@ objectMT.matchesCriteria = function(self, searchParameters, isPattern)
     return answer
 end
 
+-- Identical criteria in a row will match on self for second criteria... need a way to avoid or detect...
+--
+-- maybe: add position parameter; include {self, 0} only if == 1;
+-- include self's vars at 1 in searchable before loop if not already in there
+
 local searchPathHamster = function(self, levelCriteria, levelDepth, withParents)
     local attached = debug.getuservalue(self) or {}
     local seen = attached.seen or {}
-    local searchables = attached.searchables or { { self, 0 } }
+    local searchables = attached.searchables or {}
+    if not attached.searchables then -- pre-populate a new list of potentials
+        if levelCriteria._includeSelf then
+            table.insert(searchables, { self, 0 })
+        else
+            local values = self:allAttributeValues() or {}
+            for k,v in pairs(values) do
+                if not fnutils.contains(parentLabels, k) or withParents then
+                    if getmetatable(v) == objectMT then
+                        table.insert(searchables, { v, 1 })
+                    elseif type(v) == "table" and #v > 0 then
+                        for i, v2 in ipairs(v) do
+                            if getmetatable(v2) == objectMT then
+                                table.insert(searchables, { v2, 1 })
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
     local found, haveWarnedAlready = false, false
     local count = levelCriteria._count or 1
     local addToParentIgnoreList = {}
@@ -603,7 +629,7 @@ local searchPathHamster = function(self, levelCriteria, levelDepth, withParents)
             if newDepth > levelDepth then
                 if not haveWarnedAlready then
                     haveWarnedAlready = true
-                    log.d("** max depth exceeded")
+                    log.v("** max depth exceeded")
                 end
             else
                 local values = element:allAttributeValues() or {}
@@ -634,6 +660,7 @@ local searchPathHamster = function(self, levelCriteria, levelDepth, withParents)
     uservalue.seen        = seen
     uservalue.searchables = searchables
     debug.setuservalue(self, uservalue)
+--     log.vf("seen: %d, searchable: %d", #seen, #searchables)
     return found, addToParentIgnoreList
 end
 
@@ -664,13 +691,17 @@ local searchPathWrapper = function(self, criteria, depth, withParents, path, cri
     if not criteriaSeen then
         criteriaSeen = {}
         criteria = simpleCopy(criteria) -- in case the table is being used outside of us, we want to capture it's state *now* for :next
+
+        -- allow the first query item to match self if the user doesn't specify one way or the other
+        if criteria[1] and type(criteria[1]._includeSelf) == "nil" then criteria[1]._includeSelf = true end
+
         for i, v in ipairs(criteria) do criteriaSeen[v] = {} end
     end
 
     while not failed and position <= #criteria do
         local element = path[#path]
         local levelCriteria = criteria[position]
-        log.vf("push:%s", element:role())
+        log.df("push:%s, searching for:%s", element:role(), inspect(levelCriteria):gsub("%s+", " "))
         local step, thingsToIgnore = searchPathHamster(element, levelCriteria, levelCriteria._depth or depth, withParents)
         if step then
             if not fnutils.contains(criteriaSeen[levelCriteria], step) then
@@ -682,7 +713,7 @@ local searchPathWrapper = function(self, criteria, depth, withParents, path, cri
             end
         end
         if not step then
-            log.vf("pop: %s", element:role()) ;
+            log.df("pop: %s", element:role()) ;
             table.remove(path)
             position = position - 1
             if position == 0 then
@@ -707,7 +738,7 @@ end
 objectMT.searchPath = function(self, criteria, depth, withParents)
     debug.setuservalue(self, nil) -- this is a brand new search, so clear anything that may remain
     criteria = criteria or {}
-    if type(criteria) == "string" then criteria = { criteria } end
+    if type(criteria) == "string" then criteria = { { role = criteria } } end
     if #criteria == 0 then criteria = { criteria } end
     if type(depth) == "boolean" and type(withParents) == "nil" then
         depth, withParents = nil, depth

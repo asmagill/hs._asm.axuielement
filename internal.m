@@ -656,7 +656,7 @@ static int getAllAttributeValues(lua_State *L) {
     CFArrayRef attributeNames ;
     AXError errorState = AXUIElementCopyAttributeNames(theRef, &attributeNames) ;
     if (errorState == kAXErrorSuccess) {
-        CFArrayRef values ;
+        CFArrayRef values = nil ;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wassign-enum"
         errorState = AXUIElementCopyMultipleAttributeValues(theRef, attributeNames, 0, &values) ;
