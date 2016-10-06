@@ -1053,6 +1053,27 @@ static int axuielementToWindow(lua_State *L) {
     return 1 ;
 }
 
+static int axuielement_setTimeout(lua_State *L) {
+    LuaSkin *skin = [LuaSkin shared] ;
+    [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TNUMBER, LS_TBREAK] ;
+    AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
+    AXError errorState = AXUIElementSetMessagingTimeout(theRef, (float)lua_tonumber(L, 2)) ;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
+    switch (errorState) {
+        case kAXErrorSuccess:
+            lua_pushvalue(L, 1) ;
+            break ;
+        case kAXErrorIllegalArgument:
+            return luaL_argerror(L, 2, "timeout must be zero or positive") ;
+        case kAXErrorInvalidUIElement:
+            return luaL_argerror(L, 1, "axuielement object is not valid") ;
+        default:
+            return luaL_error(L, "unexpected error:%s", AXErrorAsString(errorState)) ;
+    }
+#pragma clang diagnostic pop
+    return 1 ;
+}
 
 #pragma mark - Module Constants
 
@@ -1490,6 +1511,7 @@ static const luaL_Reg userdata_metaLib[] = {
     {"asHSWindow",                  axuielementToWindow},
     {"asHSApplication",             axuielementToApplication},
     {"copy",                        duplicateReference},
+    {"setTimeout",                  axuielement_setTimeout},
 
     {"__tostring",                  userdata_tostring},
     {"__eq",                        userdata_eq},
