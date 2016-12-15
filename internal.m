@@ -1044,7 +1044,7 @@ static int axuielementToWindow(lua_State *L) {
     if ((errorState == kAXErrorSuccess) &&
         (CFGetTypeID(value) == CFStringGetTypeID()) &&
         ([(__bridge NSString *)value isEqualToString:(__bridge NSString *)kAXWindowRole])) {
-        new_window(L, theRef) ;
+        new_window(L, CFRetain(theRef)) ;
     } else {
         lua_pushnil(L) ;
     }
