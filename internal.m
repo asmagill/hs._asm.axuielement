@@ -348,8 +348,8 @@ static CFTypeRef lua_toCFTypeHamster(lua_State *L, int idx, NSMutableDictionary 
                       CFArrayAppendValue(holder, theVal) ;
                       if (theVal) CFRelease(theVal) ;
                       lua_pop(L, 1) ;
-                      value = holder ;
                   }
+                  value = holder ;
               } else {                                      // CFDictionary
                   CFMutableDictionaryRef holder = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks) ;
                   lua_pushnil(L) ;
@@ -360,8 +360,8 @@ static CFTypeRef lua_toCFTypeHamster(lua_State *L, int idx, NSMutableDictionary 
                       if (theKey) CFRelease(theKey) ;
                       if (theVal) CFRelease(theVal) ;
                       lua_pop(L, 1) ;
-                      value = holder ;
                   }
+                  value = holder ;
               }
             }
         } else if (theType == LUA_TUSERDATA) {
@@ -370,12 +370,12 @@ static CFTypeRef lua_toCFTypeHamster(lua_State *L, int idx, NSMutableDictionary 
             } else if (luaL_testudata(L, index, USERDATA_TAG)) {
                 value = CFRetain(get_axuielementref(L, index, USERDATA_TAG)) ;
             } else {
-                lua_pop(L, 1) ;
+//                 lua_pop(L, 1) ; <-- I think this is an error
                 [skin logError:[NSString stringWithFormat:@"%s:unrecognized userdata is not supported for conversion", USERDATA_TAG]] ;
                 return kCFNull ;
             }
         } else if (theType != LUA_TNIL) { // value already set to kCFNull, no specific match necessary
-            lua_pop(L, 1) ;
+//             lua_pop(L, 1) ; <-- I think this is an error
             [skin logError:[NSString stringWithFormat:@"%s:type %s not supported for conversion", USERDATA_TAG, lua_typename(L, theType)]] ;
             return kCFNull ;
         }
