@@ -1,5 +1,7 @@
 #import "common.h"
 
+#define DEBUGGING_METHODS
+
 static int refTable = LUA_NOREF ;
 
 static NSMutableDictionary *observerDetails = nil ;
@@ -13,11 +15,8 @@ int pushAXObserver(lua_State *L, AXObserverRef observer) {
             @"selfRefCount" : @(0),
             @"callbackRef"  : @(LUA_NOREF),
             @"isRunning"    : @(NO),
-            @"watching"     : [[NSMutableDictionary alloc] init] ;
+            @"watching"     : [[NSMutableDictionary alloc] init],
         }] ;
-
-#pragma message "pushAXObserver whatever else needs to be initialized"
-
         observerDetails[(__bridge id)observer] = details ;
     }
     details[@"selfRefCount"] = @([(NSNumber *)details[@"selfRefCount"] intValue] + 1) ;
@@ -41,9 +40,14 @@ static void cleanupAXObserver(AXObserverRef observer, NSMutableDictionary *detai
         CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), kCFRunLoopCommonModes) ;
         details[@"isRunning"] = @(NO) ;
     }
-
-#pragma message "cleanupAXObserver whatever else needs to cleared"
-
+    NSMutableDictionary *watching = details[@"watching"] ;
+    [watching enumerateKeysAndObjectsUsingBlock:^(id key, NSArray *list, __unused BOOL *stop) {
+        AXUIElementRef element = (__bridge AXUIElementRef)key ;
+        for (NSString *notification in list) {
+            AXObserverRemoveNotification(observer, element, (__bridge CFStringRef)notification) ;
+        }
+    }] ;
+    [watching removeAllObjects] ;
 }
 
 static void observerCallback(AXObserverRef observer, AXUIElementRef element, CFStringRef notification, CFDictionaryRef info, __unused void *refcon) {
@@ -156,8 +160,18 @@ static int observer_addWatchedElement(lua_State *L) {
     AXUIElementRef      element  = get_axuielementref(L, 2, USERDATA_TAG) ;
     NSString            *notification = [skin toNSObjectAtIndex:3] ;
 
-// AXError AXObserverAddNotification(AXObserverRef observer, AXUIElementRef element, CFStringRef notification, void *refcon);
-
+    NSMutableDictionary *watching      = details[@"watching"] ;
+    NSMutableArray      *notifications = watching[(__bridge id)element] ;
+    if (!(notifications && [notifications containsObject:notification])) {
+        if (!notifications) {
+            notifications = [[NSMutableArray alloc] init] ;
+            watching[(__bridge id)element] = notifications ;
+        }
+        AXError err = AXObserverAddNotification(observer, element, (__bridge CFStringRef)notification, NULL) ;
+        if (err != kAXErrorSuccess) return luaL_error(L, AXErrorAsString(err)) ;
+        [notifications addObject:notification] ;
+    }
+    lua_pushvalue(L, 1) ;
     return 1 ;
 }
 
@@ -172,20 +186,59 @@ static int observer_removeWatchedElement(lua_State *L) {
     AXUIElementRef      element  = get_axuielementref(L, 2, USERDATA_TAG) ;
     NSString            *notification = [skin toNSObjectAtIndex:3] ;
 
-// AXError AXObserverRemoveNotification(AXObserverRef observer, AXUIElementRef element, CFStringRef notification);
-
+    NSMutableDictionary *watching      = details[@"watching"] ;
+    NSMutableArray      *notifications = watching[(__bridge id)element] ;
+    if (notifications && [notifications containsObject:notification]) {
+        AXError err = AXObserverRemoveNotification(observer, element, (__bridge CFStringRef)notification) ;
+        if (err != kAXErrorSuccess) return luaL_error(L, AXErrorAsString(err)) ;
+        [notifications removeObject:notification] ;
+    }
+    lua_pushvalue(L, 1) ;
     return 1 ;
 }
 
 static int observer_watchedElements(lua_State *L) {
     LuaSkin *skin = [LuaSkin shared] ;
-    [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK] ;
+    [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK | LS_TVARARG] ;
     AXObserverRef       observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
     NSMutableDictionary *details = observerDetails[(__bridge id)observer] ;
-
+    AXUIElementRef      element = NULL ;
+    if (lua_gettop(L) > 1) {
+        [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ;
+        element = get_axuielementref(L, 2, USERDATA_TAG) ;
+    }
+    NSMutableDictionary *watching = details[@"watching"] ;
+    if (element) {
+        NSArray *notifications = watching[(__bridge id)element] ;
+        if (notifications) {
+            [skin pushNSObject:notifications] ;
+        } else {
+            lua_newtable(L) ;
+        }
+    } else {
+        lua_newtable(L) ;
+        [watching enumerateKeysAndObjectsUsingBlock:^(id key, NSArray *list, __unused BOOL *stop) {
+            pushAXUIElement(L, (__bridge AXUIElementRef)key) ;
+            [skin pushNSObject:list] ;
+            lua_settable(L, -2) ;
+        }] ;
+    }
     return 1 ;
 }
 
+#ifdef DEBUGGING_METHODS
+static int observer_internalDetails(lua_State *L) {
+    LuaSkin *skin = [LuaSkin shared] ;
+    NSMutableDictionary *details = observerDetails ;
+    if (lua_gettop(L) > 0) {
+        [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK] ;
+        AXObserverRef       observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
+        details = observerDetails[(__bridge id)observer] ;
+    }
+    [skin pushNSObject:details withOptions:LS_NSDescribeUnknownTypes] ;
+    return 1 ;
+}
+#endif
 
 #pragma mark - Module Constants
 
@@ -293,24 +346,31 @@ static int meta_gc(lua_State* __unused L) {
 
 // Metatable for userdata objects
 static const luaL_Reg userdata_metaLib[] = {
-    {"start",           observer_start},
-    {"stop",            observer_stop},
-    {"isRunning",       observer_isRunning},
-    {"callback",        observer_callback},
-    {"addWatcher",      observer_addWatchedElement},
-    {"removeWatcher",   observer_removeWatchedElement},
-    {"watchedElements", observer_watchedElements},
+    {"start",         observer_start},
+    {"stop",          observer_stop},
+    {"isRunning",     observer_isRunning},
+    {"callback",      observer_callback},
+    {"addWatcher",    observer_addWatchedElement},
+    {"removeWatcher", observer_removeWatchedElement},
+    {"watching",      observer_watchedElements},
 
-    {"__tostring",      userdata_tostring},
-    {"__eq",            userdata_eq},
-    {"__gc",            userdata_gc},
-    {NULL,              NULL}
+#ifdef DEBUGGING_METHODS
+    {"_internals",    observer_internalDetails},
+#endif
+
+    {"__tostring",    userdata_tostring},
+    {"__eq",          userdata_eq},
+    {"__gc",          userdata_gc},
+    {NULL,            NULL}
 } ;
 
 // Functions for returned object when module loads
 static luaL_Reg moduleLib[] = {
-    {"new", observer_new},
-    {NULL,  NULL}
+    {"new",        observer_new},
+#ifdef DEBUGGING_METHODS
+    {"_internals", observer_internalDetails},
+#endif
+    {NULL,         NULL}
 } ;
 
 // Metatable for module, if needed
