@@ -193,8 +193,9 @@ module.subroles                = _makeConstantsTable(module.subroles)
 module.parameterizedAttributes = _makeConstantsTable(module.parameterizedAttributes)
 module.actions                 = _makeConstantsTable(module.actions)
 module.attributes              = _makeConstantsTable(module.attributes)
-module.notifications           = _makeConstantsTable(module.notifications)
 module.directions              = _makeConstantsTable(module.directions)
+
+module.observer.notifications  = _makeConstantsTable(module.observer.notifications)
 
 --- hs._asm.axuielement.systemElementAtPosition(x, y | { x, y }) -> axuielementObject
 --- Constructor

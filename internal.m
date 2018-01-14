@@ -1,19 +1,10 @@
-@import Cocoa ;
-@import LuaSkin ;
+#import "common.h"
 
-#import "application.h"
-#import "window.h"
-
-// #import "AXTextMarker.h"
-
-#define USERDATA_TAG "hs._asm.axuielement"
 static int refTable = LUA_NOREF ;
-
-#define get_axuielementref(L, idx, tag) *((AXUIElementRef*)luaL_checkudata(L, idx, tag))
 
 #pragma mark - Support Functions
 
-static int pushAXUIElement(lua_State *L, AXUIElementRef theElement) {
+int pushAXUIElement(lua_State *L, AXUIElementRef theElement) {
     AXUIElementRef* thePtr = lua_newuserdata(L, sizeof(AXUIElementRef)) ;
     *thePtr = CFRetain(theElement) ;
     luaL_getmetatable(L, USERDATA_TAG) ;
@@ -21,7 +12,7 @@ static int pushAXUIElement(lua_State *L, AXUIElementRef theElement) {
     return 1 ;
 }
 
-static const char *AXErrorAsString(AXError theError) {
+const char *AXErrorAsString(AXError theError) {
     const char *ans ;
     switch(theError) {
         case kAXErrorSuccess:                           ans = "No error occurred" ; break ;
@@ -158,6 +149,12 @@ static int pushCFTypeHamster(lua_State *L, CFTypeRef theItem, NSMutableDictionar
         [skin pushNSObject:(__bridge_transfer NSString *)CFRetain(CFURLGetString(theItem))] ;
     } else if (theType == AXUIElementGetTypeID()) {
         pushAXUIElement(L, theItem) ;
+    } else if (theType == AXObserverGetTypeID()) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+// Apple is #^#$@#%^$ inconsistent with Core Foundation types as other CF type refs don't trigger a warning.
+        pushAXObserver(L, (AXObserverRef)theItem) ;
+#pragma clang diagnostic pop
 // Thought I'd found the missing framework, but apparently not
 //     } else if (theType == wkGetAXTextMarkerTypeID()) {
 //         lua_newtable(L) ;
@@ -369,6 +366,8 @@ static CFTypeRef lua_toCFTypeHamster(lua_State *L, int idx, NSMutableDictionary 
                 value = (__bridge_retained CFAttributedStringRef)[skin toNSObjectAtIndex:index] ;
             } else if (luaL_testudata(L, index, USERDATA_TAG)) {
                 value = CFRetain(get_axuielementref(L, index, USERDATA_TAG)) ;
+            } else if (luaL_testudata(L, index, OBSERVER_TAG)) {
+                value = CFRetain(get_axobserverref(L, index, OBSERVER_TAG)) ;
             } else {
 //                 lua_pop(L, 1) ; <-- I think this is an error
                 [skin logError:[NSString stringWithFormat:@"%s:unrecognized userdata is not supported for conversion", USERDATA_TAG]] ;
@@ -1392,51 +1391,6 @@ static int pushActionsTable(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement.notifications[]
-/// Constant
-/// A table of accessibility object notification names, provided for reference.
-///
-/// Notes:
-///  * Notification support is currently not provided by this module, so this table is in anticipation of future additions.
-static int pushNotificationsTable(lua_State *L) {
-    LuaSkin *skin = [LuaSkin shared] ;
-    lua_newtable(L) ;
-// Focus notifications
-    [skin pushNSObject:(__bridge NSString *)kAXMainWindowChangedNotification] ;       lua_setfield(L, -2, "mainWindowChanged") ;
-    [skin pushNSObject:(__bridge NSString *)kAXFocusedWindowChangedNotification] ;    lua_setfield(L, -2, "focusedWindowChanged") ;
-    [skin pushNSObject:(__bridge NSString *)kAXFocusedUIElementChangedNotification] ; lua_setfield(L, -2, "focusedUIElementChanged") ;
-// Application notifications
-    [skin pushNSObject:(__bridge NSString *)kAXApplicationActivatedNotification] ;    lua_setfield(L, -2, "applicationActivated") ;
-    [skin pushNSObject:(__bridge NSString *)kAXApplicationDeactivatedNotification] ;  lua_setfield(L, -2, "applicationDeactivated") ;
-    [skin pushNSObject:(__bridge NSString *)kAXApplicationHiddenNotification] ;       lua_setfield(L, -2, "applicationHidden") ;
-    [skin pushNSObject:(__bridge NSString *)kAXApplicationShownNotification] ;        lua_setfield(L, -2, "applicationShown") ;
-// Window notifications
-    [skin pushNSObject:(__bridge NSString *)kAXWindowCreatedNotification] ;           lua_setfield(L, -2, "windowCreated") ;
-    [skin pushNSObject:(__bridge NSString *)kAXWindowMovedNotification] ;             lua_setfield(L, -2, "windowMoved") ;
-    [skin pushNSObject:(__bridge NSString *)kAXWindowResizedNotification] ;           lua_setfield(L, -2, "windowResized") ;
-    [skin pushNSObject:(__bridge NSString *)kAXWindowMiniaturizedNotification] ;      lua_setfield(L, -2, "windowMiniaturized") ;
-    [skin pushNSObject:(__bridge NSString *)kAXWindowDeminiaturizedNotification] ;    lua_setfield(L, -2, "windowDeminiaturized") ;
-// New drawer, sheet, and help tag notifications
-    [skin pushNSObject:(__bridge NSString *)kAXDrawerCreatedNotification] ;           lua_setfield(L, -2, "drawerCreated") ;
-    [skin pushNSObject:(__bridge NSString *)kAXSheetCreatedNotification] ;            lua_setfield(L, -2, "sheetCreated") ;
-    [skin pushNSObject:(__bridge NSString *)kAXHelpTagCreatedNotification] ;          lua_setfield(L, -2, "helpTagCreated") ;
-// Element notifications
-    [skin pushNSObject:(__bridge NSString *)kAXValueChangedNotification] ;            lua_setfield(L, -2, "valueChanged") ;
-    [skin pushNSObject:(__bridge NSString *)kAXUIElementDestroyedNotification] ;      lua_setfield(L, -2, "UIElementDestroyed") ;
-// Menu notifications
-    [skin pushNSObject:(__bridge NSString *)kAXMenuOpenedNotification] ;              lua_setfield(L, -2, "menuOpened") ;
-    [skin pushNSObject:(__bridge NSString *)kAXMenuClosedNotification] ;              lua_setfield(L, -2, "menuClosed") ;
-    [skin pushNSObject:(__bridge NSString *)kAXMenuItemSelectedNotification] ;        lua_setfield(L, -2, "menuItemSelected") ;
-// Table and outline view notifications
-    [skin pushNSObject:(__bridge NSString *)kAXRowCountChangedNotification] ;         lua_setfield(L, -2, "rowCountChanged") ;
-// Miscellaneous notifications
-    [skin pushNSObject:(__bridge NSString *)kAXSelectedChildrenChangedNotification] ; lua_setfield(L, -2, "selectedChildrenChanged") ;
-    [skin pushNSObject:(__bridge NSString *)kAXResizedNotification] ;                 lua_setfield(L, -2, "resized") ;
-    [skin pushNSObject:(__bridge NSString *)kAXMovedNotification] ;                   lua_setfield(L, -2, "moved") ;
-    [skin pushNSObject:(__bridge NSString *)kAXCreatedNotification] ;                 lua_setfield(L, -2, "created") ;
-    return 1 ;
-}
-
 /// hs._asm.axuielement.directions[]
 /// Constant
 /// A table of common directions which may be specified as the value of an accessibility object property, provided for reference.
@@ -1468,7 +1422,7 @@ static int userdata_tostring(lua_State* L) {
     if (errorState == kAXErrorSuccess) {
         title = (__bridge NSString *)value ;
     }
-    [skin pushNSObject:[NSString stringWithFormat:@"%s: %@ (%p)", USERDATA_TAG, title, (void *)(size_t)theRef]] ;
+    [skin pushNSObject:[NSString stringWithFormat:@"%s: %@ (%p)", USERDATA_TAG, title, lua_topointer(L, 1)]] ;
     if (value) CFRelease(value) ;
     return 1 ;
 }
@@ -1555,9 +1509,11 @@ static luaL_Reg moduleLib[] = {
 int luaopen_hs__asm_axuielement_internal(lua_State* L) {
     LuaSkin *skin = [LuaSkin shared] ;
     refTable = [skin registerLibraryWithObject:USERDATA_TAG
-                                                 functions:moduleLib
-                                             metaFunctions:nil
-                                           objectFunctions:userdata_metaLib] ;
+                                     functions:moduleLib
+                                 metaFunctions:nil
+                               objectFunctions:userdata_metaLib] ;
+
+    luaopen_hs__asm_axuielement_observer(L) ; lua_setfield(L, -2, "observer") ;
 
 // For reference, since the object __init wrapper in init.lua and the keys for elementSearch don't
 // actually use them in case the user wants to use an Application defined attribute or action not
@@ -1571,11 +1527,6 @@ int luaopen_hs__asm_axuielement_internal(lua_State* L) {
     pushRolesTable(L) ;                   lua_setfield(L, -2, "roles") ;
     pushSubrolesTable(L) ;                lua_setfield(L, -2, "subroles") ;
     pushDirectionsTable(L) ;              lua_setfield(L, -2, "directions") ;
-
-// not sure about this yet... we're not handling observers (yet? that gets into what I believe
-// hs.uielement is for (I really should check it out again), so the questions are does this offer
-// more and can/should we extend that instead?)
-    pushNotificationsTable(L) ;           lua_setfield(L, -2, "notifications") ;
 
     return 1 ;
 }
