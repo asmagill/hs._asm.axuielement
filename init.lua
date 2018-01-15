@@ -22,10 +22,6 @@
 ---
 ---
 --- Limited support for parameterized attributes is provided, but is not yet complete.  This is expected to see updates in the future.
----
---- An object observer is also expected to be added to receive notifications; however as this overlaps with `hs.uielement`, exactly how this will be done is still being considered.
----
---- Examples are (will be soon) provided in a separate document.
 
 local USERDATA_TAG = "hs._asm.axuielement"
 local module       = require(USERDATA_TAG..".internal")

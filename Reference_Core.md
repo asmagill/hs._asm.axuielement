@@ -23,10 +23,6 @@ You can also treat the axuielementObject userdata as a table of key-value pairs 
 
 Limited support for parameterized attributes is provided, but is not yet complete.  This is expected to see updates in the future.
 
-An object observer is also expected to be added to receive notifications; however as this overlaps with `hs.uielement`, exactly how this will be done is still being considered.
-
-Examples are (will be soon) provided in a separate document.
-
 ### Usage
 ~~~lua
 axuielement = require("hs._asm.axuielement")
@@ -45,11 +41,13 @@ axuielement = require("hs._asm.axuielement")
 ##### Module Methods
 * <a href="#actionDescription">axuielement:actionDescription(action) -> string</a>
 * <a href="#actionNames">axuielement:actionNames() -> table</a>
+* <a href="#allAttributeValues">axuielement:allAttributeValues([includeErrors]) -> table</a>
 * <a href="#asHSApplication">axuielement:asHSApplication() -> hs.application object | nil</a>
-* <a href="#asHSApplication">axuielement:asHSWindow() -> hs.window object | nil</a>
+* <a href="#asHSWindow">axuielement:asHSWindow() -> hs.window object | nil</a>
 * <a href="#attributeNames">axuielement:attributeNames() -> table</a>
 * <a href="#attributeValue">axuielement:attributeValue(attribute) -> value</a>
 * <a href="#attributeValueCount">axuielement:attributeValueCount(attribute) -> integer</a>
+* <a href="#copy">axuielement:copy() -> axuielementObject</a>
 * <a href="#dynamicMethods">axuielement:dynamicMethods([keyValueTable]) -> table</a>
 * <a href="#elementAtPosition">axuielement:elementAtPosition(x, y | { x, y }) -> axuielementObject</a>
 * <a href="#elementSearch">axuielement:elementSearch(matchCriteria, [isPattern], [includeParents]) -> table</a>
@@ -66,7 +64,6 @@ axuielement = require("hs._asm.axuielement")
 * <a href="#actions">axuielement.actions[]</a>
 * <a href="#attributes">axuielement.attributes[]</a>
 * <a href="#directions">axuielement.directions[]</a>
-* <a href="#notifications">axuielement.notifications[]</a>
 * <a href="#parameterizedAttributes">axuielement.parameterizedAttributes[]</a>
 * <a href="#roles">axuielement.roles[]</a>
 * <a href="#subroles">axuielement.subroles[]</a>
@@ -185,6 +182,20 @@ Notes:
 
 - - -
 
+<a name="allAttributeValues"></a>
+~~~lua
+axuielement:allAttributeValues([includeErrors]) -> table
+~~~
+Returns a table containing key-value pairs for all attributes of the accessibility object.
+
+Parameters:
+ * `includeErrors` - an optional boolean, default false, that specifies whether attribute names which generate an error when retrieved are included in the returned results.
+
+Returns:
+ * a table with key-value pairs corresponding to the attributes of the accessibility object.
+
+- - -
+
 <a name="asHSApplication"></a>
 ~~~lua
 axuielement:asHSApplication() -> hs.application object | nil
@@ -261,6 +272,23 @@ Parameters:
 
 Returns:
  * the number of items in the value for the attribute, if it is an array, or nil if the value is not an array.
+
+- - -
+
+<a name="copy"></a>
+~~~lua
+axuielement:copy() -> axuielementObject
+~~~
+Return a duplicate userdata reference to the Accessibility object.
+
+Parameters:
+ * None
+
+Returns:
+ * a new userdata object representing a new reference to the Accessibility object.
+
+Notes:
+ * The new userdata will have no search state information attached to it, and is used internally by [hs._asm.axuielement:searchPath](#searchPath).
 
 - - -
 
@@ -536,17 +564,6 @@ Notes:
 
 - - -
 
-<a name="notifications"></a>
-~~~lua
-axuielement.notifications[]
-~~~
-A table of accessibility object notification names, provided for reference.
-
-Notes:
- * Notification support is currently not provided by this module, so this table is in anticipation of future additions.
-
-- - -
-
 <a name="parameterizedAttributes"></a>
 ~~~lua
 axuielement.parameterizedAttributes[]
@@ -584,7 +601,7 @@ Notes:
 
 >     The MIT License (MIT)
 >
-> Copyright (c) 2016 Aaron Magill
+> Copyright (c) 2018 Aaron Magill
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 >

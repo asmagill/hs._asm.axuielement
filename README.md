@@ -1,7 +1,7 @@
 hs._asm.axuielement
 ===================
 
-*** NOTE: The current source is undergoing major changes and is not currently working (though it will compile) -- use the precompiled versions or wait; I hope to have this fixed in the next day or so. ***
+***NOTE: Version 0.7alpha contains initial support for observers; it should be considered very experimental. Some modifications were also made to the core module to facilitate the observers, but the changes shouldn't affect the existing syntax or functionality -- if you think that it has, please revert to version 0.6.1 to verify and submit a bug report with the details.***
 
 
 This is still very much a work in progress, and whether or not it makes it into Hammerspoon core in its current form is still undecided.  However, as there has been some interest expressed in the module, I have finally gotten around to cleaning it up some and creating a [reference document](Reference.md) for it.
@@ -15,7 +15,7 @@ $ cd ~/.hammerspoon # or wherever your Hammerspoon init.lua file is located
 $ tar -xzf ~/Downloads/axuielement-v0.x.tar.gz # or wherever your downloads are located
 ~~~
 
-If you wish to build this module yourself, and have XCode installed on your Mac, the best way (you are welcome to clone the entire repository if you like, but no promises on the current state of anything) is to download `init.lua`, `internal.m`, `window.h`, `application.h`, and `Makefile` (at present, nothing else is required) into a directory of your choice and then do the following:
+If you wish to build this module yourself, and have XCode installed on your Mac, the best way (you are welcome to clone the entire repository if you like, but no promises on the current state of anything) is to download `init.lua`, `internal.m`, `common.m`, `common.h`, `observer.m`, and `Makefile` (at present, nothing else is required) into a directory named "axuielement" and then do the following:
 
 ~~~sh
 $ cd wherever-you-downloaded-the-files

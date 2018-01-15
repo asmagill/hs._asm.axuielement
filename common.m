@@ -76,6 +76,11 @@ void new_window(lua_State* L, AXUIElementRef win) {
 static int pushCFTypeHamster(lua_State *L, CFTypeRef theItem, NSMutableDictionary *alreadySeen, int refTable) {
     LuaSkin *skin = [LuaSkin shared] ;
 
+    if (!theItem) {
+        lua_pushnil(L) ;
+        return 1 ;
+    }
+
     CFTypeID theType = CFGetTypeID(theItem) ;
     if      (theType == CFArrayGetTypeID()) {
         if (alreadySeen[(__bridge id)theItem]) {
