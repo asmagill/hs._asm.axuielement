@@ -4,61 +4,80 @@
 
 static int refTable = LUA_NOREF ;
 
-static NSMutableDictionary *observerDetails = nil ;
+static CFMutableDictionaryRef observerDetails = NULL ;
+
+static CFStringRef keySelfRefCount = CFSTR("selfRefCount") ;
+static CFStringRef keyCallbackRef  = CFSTR("callbackRef") ;
+static CFStringRef keyIsRunning    = CFSTR("isRunning") ;
+static CFStringRef keyWatching     = CFSTR("watching") ;
 
 #pragma mark - Support Functions
 
+
 int pushAXObserver(lua_State *L, AXObserverRef observer) {
-    NSMutableDictionary *details = observerDetails[(__bridge id)observer] ;
+    CFMutableDictionaryRef details = CFDictionaryGetValue(observerDetails, observer) ;
     if (!details) {
-        details = [[NSMutableDictionary alloc] initWithDictionary:@{
-            @"selfRefCount" : @(0),
-            @"callbackRef"  : @(LUA_NOREF),
-            @"isRunning"    : @(NO),
-            @"watching"     : [[NSMutableDictionary alloc] init],
-        }] ;
-        observerDetails[(__bridge id)observer] = details ;
+        details = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks) ;
+        CFDictionarySetValue(details, keySelfRefCount, (__bridge CFNumberRef)@(0)) ;
+        CFDictionarySetValue(details, keyCallbackRef,  (__bridge CFNumberRef)@(LUA_NOREF)) ;
+        CFDictionarySetValue(details, keyIsRunning,    kCFBooleanFalse) ;
+        CFDictionarySetValue(details, keyWatching,     CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks)) ;
+
+        CFDictionarySetValue(observerDetails, observer, details) ;
     }
-    details[@"selfRefCount"] = @([(NSNumber *)details[@"selfRefCount"] intValue] + 1) ;
+
+    int selfRefCount = [(__bridge NSNumber *)CFDictionaryGetValue(details, keySelfRefCount) intValue] ;
+    selfRefCount++ ;
+    CFDictionarySetValue(details, keySelfRefCount, (__bridge CFNumberRef)@(selfRefCount)) ;
 
     AXObserverRef* thePtr = lua_newuserdata(L, sizeof(AXObserverRef)) ;
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wincompatible-pointer-types-discards-qualifiers"
-// Apple is #^#$@#%^$ inconsistent with Core Foundation types as other CF type refs don't trigger a warning.
     *thePtr = CFRetain(observer) ;
-#pragma clang diagnostic pop
     luaL_getmetatable(L, OBSERVER_TAG) ;
     lua_setmetatable(L, -2) ;
     return 1 ;
 }
 
 // reduce duplication in meta_gc and userdata_gc
-static void cleanupAXObserver(AXObserverRef observer, NSMutableDictionary *details) {
-    LuaSkin *skin = [LuaSkin shared] ;
-    details[@"callbackRef"] = @([skin luaUnref:refTable ref:[(NSNumber *)details[@"callbackRef"] intValue]]) ;
-    if ([(NSNumber *)details[@"isRunning"] boolValue]) {
-        CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), kCFRunLoopCommonModes) ;
-        details[@"isRunning"] = @(NO) ;
+
+static void purgeWatchers(const void *key, const void *value, void *context) {
+    AXUIElementRef    element       = key ;
+    CFMutableArrayRef notifications = value ;
+    AXObserverRef     observer      = context ;
+
+    for (CFIndex i = 0 ; i < CFArrayGetCount(notifications) ; i++) {
+        CFStringRef what = CFArrayGetValueAtIndex(notifications, i) ;
+        AXObserverRemoveNotification(observer, element, what) ;
     }
-    NSMutableDictionary *watching = details[@"watching"] ;
-    [watching enumerateKeysAndObjectsUsingBlock:^(id key, NSArray *list, __unused BOOL *stop) {
-        AXUIElementRef element = (__bridge AXUIElementRef)key ;
-        for (NSString *notification in list) {
-            AXObserverRemoveNotification(observer, element, (__bridge CFStringRef)notification) ;
-        }
-    }] ;
-    [watching removeAllObjects] ;
+    CFArrayRemoveAllValues(notifications) ;
+}
+
+static void cleanupAXObserver(AXObserverRef observer, CFMutableDictionaryRef details) {
+    LuaSkin *skin = [LuaSkin shared] ;
+
+    int callbackRef = [(__bridge NSNumber *)CFDictionaryGetValue(details, keyCallbackRef) intValue] ;
+    callbackRef = [skin luaUnref:refTable ref:callbackRef] ;
+    CFDictionarySetValue(details, keyCallbackRef, (__bridge CFNumberRef)@(callbackRef)) ;
+
+    Boolean isRunning = CFBooleanGetValue(CFDictionaryGetValue(details, keyIsRunning)) ;
+    if (isRunning) {
+        CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), kCFRunLoopCommonModes) ;
+        CFDictionarySetValue(details, keyIsRunning, kCFBooleanFalse) ;
+    }
+
+    CFMutableDictionaryRef watching = CFDictionaryGetValue(details, keyWatching) ;
+    CFDictionaryApplyFunction(watching, purgeWatchers, observer) ;
+    CFDictionaryRemoveAllValues(watching) ;
 }
 
 static void observerCallback(AXObserverRef observer, AXUIElementRef element, CFStringRef notification, CFDictionaryRef info, __unused void *refcon) {
     LuaSkin   *skin = [LuaSkin shared] ;
     lua_State *L    = skin.L ;
 
-    NSDictionary *details = observerDetails[(__bridge id)observer] ;
+    CFMutableDictionaryRef details = CFDictionaryGetValue(observerDetails, observer) ;
     if (!details) {
         [skin logWarn:[NSString stringWithFormat:@"%s:callback triggered for unregistered observer", OBSERVER_TAG]] ;
     } else {
-        int callbackRef = [(NSNumber *)details[@"callbackRef"] intValue] ;
+        int callbackRef = [(__bridge NSNumber *)CFDictionaryGetValue(details, keyCallbackRef) intValue] ;
         if (callbackRef != LUA_NOREF) {
             [skin pushLuaRef:refTable ref:callbackRef] ;
             pushAXObserver(L, observer) ;
@@ -93,11 +112,13 @@ static int observer_new(lua_State *L) {
 static int observer_start(lua_State *L) {
     LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK] ;
-    AXObserverRef       observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
-    NSMutableDictionary *details = observerDetails[(__bridge id)observer] ;
-    if (![(NSNumber *)details[@"isRunning"] boolValue]) {
+    AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
+    CFMutableDictionaryRef details  = CFDictionaryGetValue(observerDetails, observer) ;
+
+    Boolean isRunning = CFBooleanGetValue(CFDictionaryGetValue(details, keyIsRunning)) ;
+    if (!isRunning) {
         CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), kCFRunLoopCommonModes) ;
-        details[@"isRunning"] = @(YES) ;
+        CFDictionarySetValue(details, keyIsRunning, kCFBooleanTrue) ;
     }
     lua_pushvalue(L, 1) ;
     return 1 ;
@@ -106,11 +127,13 @@ static int observer_start(lua_State *L) {
 static int observer_stop(lua_State *L) {
     LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK] ;
-    AXObserverRef       observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
-    NSMutableDictionary *details = observerDetails[(__bridge id)observer] ;
-    if ([(NSNumber *)details[@"isRunning"] boolValue]) {
+    AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
+    CFMutableDictionaryRef details  = CFDictionaryGetValue(observerDetails, observer) ;
+
+    Boolean isRunning = CFBooleanGetValue(CFDictionaryGetValue(details, keyIsRunning)) ;
+    if (isRunning) {
         CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), kCFRunLoopCommonModes) ;
-        details[@"isRunning"] = @(NO) ;
+        CFDictionarySetValue(details, keyIsRunning, kCFBooleanFalse) ;
     }
     lua_pushvalue(L, 1) ;
     return 1 ;
@@ -119,27 +142,30 @@ static int observer_stop(lua_State *L) {
 static int observer_isRunning(lua_State *L) {
     LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK] ;
-    AXObserverRef       observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
-    NSMutableDictionary *details = observerDetails[(__bridge id)observer] ;
-    lua_pushboolean(L, [(NSNumber *)details[@"isRunning"] boolValue]) ;
+    AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
+    CFMutableDictionaryRef details  = CFDictionaryGetValue(observerDetails, observer) ;
+
+    lua_pushboolean(L, CFBooleanGetValue(CFDictionaryGetValue(details, keyIsRunning))) ;
     return 1 ;
 }
 
 static int observer_callback(lua_State *L) {
     LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TFUNCTION | LS_TNIL | LS_TOPTIONAL, LS_TBREAK] ;
-    AXObserverRef       observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
-    NSMutableDictionary *details = observerDetails[(__bridge id)observer] ;
+    AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
+    CFMutableDictionaryRef details  = CFDictionaryGetValue(observerDetails, observer) ;
 
+    int callbackRef = [(__bridge NSNumber *)CFDictionaryGetValue(details, keyCallbackRef) intValue] ;
     if (lua_gettop(L) == 2) {
-        details[@"callbackRef"] = @([skin luaUnref:refTable ref:[(NSNumber *)details[@"callbackRef"] intValue]]) ;
+        callbackRef = [skin luaUnref:refTable ref:callbackRef] ;
+        CFDictionarySetValue(details, keyCallbackRef, (__bridge CFNumberRef)@(callbackRef)) ;
         if (lua_type(L, 2) != LUA_TNIL) {
             lua_pushvalue(L, 2) ;
-            details[@"callbackRef"] = @([skin luaRef:refTable]) ;
+            callbackRef = [skin luaRef:refTable] ;
+            CFDictionarySetValue(details, keyCallbackRef, (__bridge CFNumberRef)@(callbackRef)) ;
             lua_pushvalue(L, 1) ;
         }
     } else {
-        int callbackRef = [(NSNumber *)details[@"callbackRef"] intValue] ;
         if (callbackRef != LUA_NOREF) {
             [skin pushLuaRef:refTable ref:callbackRef] ;
         } else {
@@ -155,21 +181,25 @@ static int observer_addWatchedElement(lua_State *L) {
                     LS_TUSERDATA, USERDATA_TAG,
                     LS_TSTRING,
                     LS_TBREAK] ;
-    AXObserverRef       observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
-    NSMutableDictionary *details = observerDetails[(__bridge id)observer] ;
-    AXUIElementRef      element  = get_axuielementref(L, 2, USERDATA_TAG) ;
-    NSString            *notification = [skin toNSObjectAtIndex:3] ;
+    AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
+    CFMutableDictionaryRef details  = CFDictionaryGetValue(observerDetails, observer) ;
+    AXUIElementRef         element  = get_axuielementref(L, 2, USERDATA_TAG) ;
+    NSString               *what    = [skin toNSObjectAtIndex:3] ;
 
-    NSMutableDictionary *watching      = details[@"watching"] ;
-    NSMutableArray      *notifications = watching[(__bridge id)element] ;
-    if (!(notifications && [notifications containsObject:notification])) {
-        if (!notifications) {
-            notifications = [[NSMutableArray alloc] init] ;
-            watching[(__bridge id)element] = notifications ;
-        }
-        AXError err = AXObserverAddNotification(observer, element, (__bridge CFStringRef)notification, NULL) ;
+    CFMutableDictionaryRef watching      = CFDictionaryGetValue(details, keyWatching) ;
+    CFMutableArrayRef      notifications = CFDictionaryGetValue(watching, element) ;
+
+    Boolean exists = false ;
+    if (notifications) {
+        exists = CFArrayContainsValue(notifications, CFRangeMake(0, CFArrayGetCount(notifications)), (__bridge CFStringRef)what) ;
+    } else {
+        notifications = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks) ;
+        CFDictionarySetValue(watching, element, notifications) ;
+    }
+    if (!exists) {
+        AXError err = AXObserverAddNotification(observer, element, (__bridge CFStringRef)what, NULL) ;
         if (err != kAXErrorSuccess) return luaL_error(L, AXErrorAsString(err)) ;
-        [notifications addObject:notification] ;
+        CFArrayAppendValue(notifications, (__bridge CFStringRef)what) ;
     }
     lua_pushvalue(L, 1) ;
     return 1 ;
@@ -181,17 +211,25 @@ static int observer_removeWatchedElement(lua_State *L) {
                     LS_TUSERDATA, USERDATA_TAG,
                     LS_TSTRING,
                     LS_TBREAK] ;
-    AXObserverRef       observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
-    NSMutableDictionary *details = observerDetails[(__bridge id)observer] ;
-    AXUIElementRef      element  = get_axuielementref(L, 2, USERDATA_TAG) ;
-    NSString            *notification = [skin toNSObjectAtIndex:3] ;
+    AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
+    CFMutableDictionaryRef details  = CFDictionaryGetValue(observerDetails, observer) ;
+    AXUIElementRef         element  = get_axuielementref(L, 2, USERDATA_TAG) ;
+    NSString               *what    = [skin toNSObjectAtIndex:3] ;
 
-    NSMutableDictionary *watching      = details[@"watching"] ;
-    NSMutableArray      *notifications = watching[(__bridge id)element] ;
-    if (notifications && [notifications containsObject:notification]) {
-        AXError err = AXObserverRemoveNotification(observer, element, (__bridge CFStringRef)notification) ;
+    CFMutableDictionaryRef watching      = CFDictionaryGetValue(details, keyWatching) ;
+    CFMutableArrayRef      notifications = CFDictionaryGetValue(watching, element) ;
+
+    CFIndex exists = -1 ;
+    if (notifications) {
+        exists = CFArrayGetFirstIndexOfValue(notifications, CFRangeMake(0, CFArrayGetCount(notifications)), (__bridge CFStringRef)what) ;
+    } else {
+        notifications = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks) ;
+        CFDictionarySetValue(watching, element, notifications) ;
+    }
+    if (exists > -1) {
+        AXError err = AXObserverRemoveNotification(observer, element, (__bridge CFStringRef)what) ;
         if (err != kAXErrorSuccess) return luaL_error(L, AXErrorAsString(err)) ;
-        [notifications removeObject:notification] ;
+        CFArrayRemoveValueAtIndex(notifications, exists) ;
     }
     lua_pushvalue(L, 1) ;
     return 1 ;
@@ -200,28 +238,24 @@ static int observer_removeWatchedElement(lua_State *L) {
 static int observer_watchedElements(lua_State *L) {
     LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK | LS_TVARARG] ;
-    AXObserverRef       observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
-    NSMutableDictionary *details = observerDetails[(__bridge id)observer] ;
-    AXUIElementRef      element = NULL ;
+    AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
+    CFMutableDictionaryRef details  = CFDictionaryGetValue(observerDetails, observer) ;
+    AXUIElementRef         element  = NULL ;
     if (lua_gettop(L) > 1) {
         [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ;
         element = get_axuielementref(L, 2, USERDATA_TAG) ;
     }
-    NSMutableDictionary *watching = details[@"watching"] ;
+
+    CFMutableDictionaryRef watching = CFDictionaryGetValue(details, keyWatching) ;
     if (element) {
-        NSArray *notifications = watching[(__bridge id)element] ;
+        CFMutableArrayRef notifications = CFDictionaryGetValue(watching, element) ;
         if (notifications) {
-            [skin pushNSObject:notifications] ;
+            pushCFTypeToLua(L, notifications, refTable) ;
         } else {
             lua_newtable(L) ;
         }
     } else {
-        lua_newtable(L) ;
-        [watching enumerateKeysAndObjectsUsingBlock:^(id key, NSArray *list, __unused BOOL *stop) {
-            pushAXUIElement(L, (__bridge AXUIElementRef)key) ;
-            [skin pushNSObject:list] ;
-            lua_settable(L, -2) ;
-        }] ;
+        pushCFTypeToLua(L, watching, refTable) ;
     }
     return 1 ;
 }
@@ -229,13 +263,13 @@ static int observer_watchedElements(lua_State *L) {
 #ifdef DEBUGGING_METHODS
 static int observer_internalDetails(lua_State *L) {
     LuaSkin *skin = [LuaSkin shared] ;
-    NSMutableDictionary *details = observerDetails ;
+    CFMutableDictionaryRef details = observerDetails ;
     if (lua_gettop(L) > 0) {
         [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK] ;
         AXObserverRef       observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
-        details = observerDetails[(__bridge id)observer] ;
+        details  = CFDictionaryGetValue(observerDetails, observer) ;
     }
-    [skin pushNSObject:details withOptions:LS_NSDescribeUnknownTypes] ;
+    pushCFTypeToLua(L, details, refTable) ;
     return 1 ;
 }
 #endif
@@ -311,15 +345,18 @@ static int userdata_tostring(lua_State* L) {
 
 static int userdata_gc(lua_State* L) {
     LuaSkin *skin = [LuaSkin shared] ;
-    AXObserverRef observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
-    NSMutableDictionary *details = observerDetails[(__bridge id)observer] ;
+    AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
+    CFMutableDictionaryRef details  = CFDictionaryGetValue(observerDetails, observer) ;
+
     if (!details) {
         [skin logWarn:[NSString stringWithFormat:@"%s:__gc triggered for unregistered observer", OBSERVER_TAG]] ;
     } else {
-        details[@"selfRefCount"] = @([(NSNumber *)details[@"selfRefCount"] intValue] - 1) ;
-        if ([(NSNumber *)details[@"selfRefCount"] intValue] == 0) {
+        int selfRefCount = [(__bridge NSNumber *)CFDictionaryGetValue(details, keySelfRefCount) intValue] ;
+        selfRefCount-- ;
+        CFDictionarySetValue(details, keySelfRefCount, (__bridge CFNumberRef)@(selfRefCount)) ;
+        if (selfRefCount == 0) {
             cleanupAXObserver(observer, details) ;
-            observerDetails[(__bridge id)observer] = nil ;
+            CFDictionaryRemoveValue(observerDetails, observer) ;
             CFRelease(observer) ;
         }
     }
@@ -335,12 +372,16 @@ static int userdata_eq(lua_State* L) {
     return 1 ;
 }
 
+static void purgeObserver(const void *key, const void *value, __unused void *context) {
+    AXObserverRef          observer = key ;
+    CFMutableDictionaryRef details  = value ;
+    cleanupAXObserver(observer, details) ;
+}
+
 static int meta_gc(lua_State* __unused L) {
-    [observerDetails enumerateKeysAndObjectsUsingBlock:^(id key, NSMutableDictionary *details, __unused BOOL *stop) {
-        cleanupAXObserver((__bridge AXObserverRef)key, details) ;
-    }] ;
-    [observerDetails removeAllObjects] ;
-    observerDetails = nil ;
+    CFDictionaryApplyFunction(observerDetails, purgeObserver, NULL) ;
+    CFDictionaryRemoveAllValues(observerDetails) ;
+    observerDetails = NULL ;
     return 0 ;
 }
 
@@ -386,7 +427,7 @@ int luaopen_hs__asm_axuielement_observer(lua_State* L) {
                                  metaFunctions:module_metaLib
                                objectFunctions:userdata_metaLib] ;
 
-    observerDetails = [[NSMutableDictionary alloc] init] ;
+    observerDetails = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks) ;
 
     pushNotificationsTable(L) ; lua_setfield(L, -2, "notifications") ;
 
