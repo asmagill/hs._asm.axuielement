@@ -1,6 +1,9 @@
 hs._asm.axuielement
 ===================
 
+*** NOTE: The current source is undergoing major changes and is not currently working (though it will compile) -- use the precompiled versions or wait; I hope to have this fixed in the next day or so. ***
+
+
 This is still very much a work in progress, and whether or not it makes it into Hammerspoon core in its current form is still undecided.  However, as there has been some interest expressed in the module, I have finally gotten around to cleaning it up some and creating a [reference document](Reference.md) for it.
 
 I am leaving the rest of the Readme.md file as is for now, while I determine which examples are worth keeping and decide on a proper way to show what I have figured out, what I haven't, what still needs to be done, etc...
