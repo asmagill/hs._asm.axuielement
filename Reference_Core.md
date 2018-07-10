@@ -53,6 +53,7 @@ axuielement = require("hs._asm.axuielement")
 * <a href="#elementSearch">axuielement:elementSearch(matchCriteria, [isPattern], [includeParents]) -> table</a>
 * <a href="#getAllChildElements">axuielement:getAllChildElements([parent], [callback]) -> table | axuielementObject</a>
 * <a href="#isAttributeSettable">axuielement:isAttributeSettable(attribute) -> boolean</a>
+* <a href="#isValid">axuielement:isValid() -> boolean</a>
 * <a href="#matches">axuielement:matches(matchCriteria, [isPattern]) -> boolean</a>
 * <a href="#parameterizedAttributeNames">axuielement:parameterizedAttributeNames() -> table</a>
 * <a href="#parameterizedAttributeValue">axuielement:parameterizedAttributeValue(attribute, parameter) -> value</a>
@@ -407,6 +408,20 @@ Parameters:
 
 Returns:
  * a boolean value indicating whether or not the value of the parameter can be modified.
+
+- - -
+
+<a name="isValid"></a>
+~~~lua
+axuielement:isValid() -> boolean
+~~~
+Returns whether the specified accessibility object is still valid.
+
+Parameters:
+ * None
+
+Returns:
+ * a boolean value indicating whether or not the accessibility object is still valid.
 
 - - -
 
