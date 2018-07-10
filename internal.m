@@ -165,9 +165,11 @@ static int getApplicationElementForPID(lua_State *L) {
     AXUIElementRef value = AXUIElementCreateApplication(thePid) ;
     if (value && isApplicationOrSystem(value)) {
         pushAXUIElement(L, value) ;
-        CFRelease(value) ;
     } else {
         lua_pushnil(L) ;
+    }
+    if (value) {
+	    CFRelease(value) ;
     }
     return 1 ;
 }
@@ -429,6 +431,30 @@ static int isAttributeSettable(lua_State *L) {
     } else {
         errorWrapper(L, @"isAttributeSettable", attribute, errorState) ;
     }
+    return 1 ;
+}
+
+/// hs._asm.axuielement:isValid() -> boolean
+/// Method
+/// Returns whether the specified accessibility object is still valid.
+///
+/// Parameters:
+///  * None
+///
+/// Returns:
+///  * a boolean value indicating whether or not the accessibility object is still valid.
+static int isValid(lua_State *L) {
+    LuaSkin *skin = [LuaSkin shared] ;
+    [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ;
+    AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
+	CFTypeRef value ;
+	AXError errorState = AXUIElementCopyAttributeValue(theRef, (__bridge CFStringRef)@"AXRole", &value) ;
+	if (errorState == kAXErrorSuccess) {
+		lua_pushboolean(L, YES) ;
+	} else {
+		lua_pushboolean(L, NO) ;
+	}
+    if (value) CFRelease(value) ;
     return 1 ;
 }
 
@@ -1141,6 +1167,7 @@ static const luaL_Reg userdata_metaLib[] = {
     {"asHSApplication",             axuielementToApplication},
     {"copy",                        duplicateReference},
     {"setTimeout",                  axuielement_setTimeout},
+    {"isValid",                     isValid},
 
     {"__tostring",                  userdata_tostring},
     {"__eq",                        userdata_eq},
