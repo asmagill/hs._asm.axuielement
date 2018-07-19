@@ -1,4 +1,4 @@
 tmp/*
-*.tar.gz
+*.x.tar.gz
 *.so
 *.dSYM
