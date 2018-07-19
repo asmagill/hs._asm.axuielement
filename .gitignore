@@ -1,0 +1,4 @@
+tmp/*
+*.tar.gz
+*.so
+*.dSYM
