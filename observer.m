@@ -503,10 +503,12 @@ static void purgeObserver(const void *key, const void *value, __unused void *con
 }
 
 static int meta_gc(lua_State* __unused L) {
-    CFDictionaryApplyFunction(observerDetails, purgeObserver, NULL) ;
-    CFDictionaryRemoveAllValues(observerDetails) ;
-    CFRelease(observerDetails) ;
-    observerDetails = NULL ;
+    if (observerDetails) {
+        CFDictionaryApplyFunction(observerDetails, purgeObserver, NULL) ;
+        CFDictionaryRemoveAllValues(observerDetails) ;
+        CFRelease(observerDetails) ;
+        observerDetails = NULL ;
+    }
     return 0 ;
 }
 
