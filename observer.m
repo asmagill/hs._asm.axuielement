@@ -55,6 +55,7 @@ static void purgeWatchers(const void *key, const void *value, void *context) {
         AXObserverRemoveNotification(observer, element, what) ;
     }
     CFArrayRemoveAllValues(notifications) ;
+    CFRelease(notifications) ;
 }
 
 static void cleanupAXObserver(AXObserverRef observer, CFMutableDictionaryRef details) {
@@ -70,9 +71,16 @@ static void cleanupAXObserver(AXObserverRef observer, CFMutableDictionaryRef det
         CFDictionarySetValue(details, keyIsRunning, kCFBooleanFalse) ;
     }
 
+    // clean up the `watching` dictionary and release it.
     CFMutableDictionaryRef watching = CFDictionaryGetValue(details, keyWatching) ;
     CFDictionaryApplyFunction(watching, purgeWatchers, observer) ;
     CFDictionaryRemoveAllValues(watching) ;
+    CFDictionaryRemoveValue(details, keyWatching) ;
+    CFRelease(watching) ;
+
+    // release the details dictionary.
+    CFDictionaryRemoveAllValues(details) ;
+    CFRelease(details) ;
 }
 
 static void observerCallback(AXObserverRef observer, AXUIElementRef element, CFStringRef notification, CFDictionaryRef info, __unused void *refcon) {
@@ -127,6 +135,9 @@ static int observer_new(lua_State *L) {
     if (err != kAXErrorSuccess) return luaL_error(L, AXErrorAsString(err)) ;
 
     pushAXObserver(L, observer) ;
+
+    // release here because pushAXObserver is retaining as well.
+    CFRelease(observer) ;
     return 1 ;
 }
 
@@ -322,14 +333,13 @@ static int observer_removeWatchedElement(lua_State *L) {
     CFIndex exists = -1 ;
     if (notifications) {
         exists = CFArrayGetFirstIndexOfValue(notifications, CFRangeMake(0, CFArrayGetCount(notifications)), (__bridge CFStringRef)what) ;
-    } else {
-        notifications = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks) ;
-        CFDictionarySetValue(watching, element, notifications) ;
     }
     if (exists > -1) {
         AXError err = AXObserverRemoveNotification(observer, element, (__bridge CFStringRef)what) ;
+        if (err == kAXErrorSuccess || err == kAXErrorNotificationNotRegistered || err == kAXErrorNotificationUnsupported || err == kAXErrorInvalidUIElementObserver) {
+            CFArrayRemoveValueAtIndex(notifications, exists) ;
+        }
         if (err != kAXErrorSuccess) return luaL_error(L, AXErrorAsString(err)) ;
-        CFArrayRemoveValueAtIndex(notifications, exists) ;
     }
     lua_pushvalue(L, 1) ;
     return 1 ;
@@ -489,12 +499,16 @@ static void purgeObserver(const void *key, const void *value, __unused void *con
     AXObserverRef          observer = key ;
     CFMutableDictionaryRef details  = value ;
     cleanupAXObserver(observer, details) ;
+    CFRelease(observer) ;
 }
 
 static int meta_gc(lua_State* __unused L) {
-    CFDictionaryApplyFunction(observerDetails, purgeObserver, NULL) ;
-    CFDictionaryRemoveAllValues(observerDetails) ;
-    observerDetails = NULL ;
+    if (observerDetails) {
+        CFDictionaryApplyFunction(observerDetails, purgeObserver, NULL) ;
+        CFDictionaryRemoveAllValues(observerDetails) ;
+        CFRelease(observerDetails) ;
+        observerDetails = NULL ;
+    }
     return 0 ;
 }
 
