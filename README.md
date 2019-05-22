@@ -15,10 +15,19 @@ $ cd ~/.hammerspoon # or wherever your Hammerspoon init.lua file is located
 $ tar -xzf ~/Downloads/axuielement-v0.x.tar.gz # or wherever your downloads are located
 ~~~
 
-If you wish to build this module yourself, and have XCode installed on your Mac, the best way (you are welcome to clone the entire repository if you like, but no promises on the current state of anything) is to download `init.lua`, `internal.m`, `common.m`, `common.h`, `observer.m`, and `Makefile` (at present, nothing else is required) into a directory named "axuielement" and then do the following:
+If you wish to build this module yourself, and have XCode installed on your Mac, the best way (you are welcome to clone the entire repository if you like, but no promises on the current state of anything) is to download `init.lua`, `internal.m`, `common.m`, `common.h`, `observer.m`, and `Makefile` (at present, nothing else is required) into a directory named `axuielement` (***make sure the directory containing the downloaded files is named `axuielement` or `make install` will install the files into the wrong path***) and then do the following:
 
 ~~~sh
 $ cd wherever-you-downloaded-the-files
+$ [HS_APPLICATION=/Applications] [PREFIX=~/.hammerspoon] make install
+~~~
+
+If you choose to clone the repository, the directory name the code will be in will be named `hs._asm.axuielement`. As noted in issue #14, this will cause the module install path to be incorrect when `make install` is run. If you want to clone the entire repository, currently the easiest fix is to rename the directory and build it like this:
+
+~~~sh
+$ git clone https://github.com/asmagill/hs._asm.axuielement.git
+$ mv hs._asm.axuielement axuielement
+$ cd axuielement
 $ [HS_APPLICATION=/Applications] [PREFIX=~/.hammerspoon] make install
 ~~~
 
