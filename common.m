@@ -16,7 +16,7 @@ BOOL new_application(lua_State* L, pid_t pid) {
     if (HSA) {
         id obj = [[HSA alloc] initWithPid:pid] ;
         if (obj) {
-            [[LuaSkin shared] pushNSObject:obj] ;
+            [[LuaSkin sharedWithState:L] pushNSObject:obj] ;
             return true ;
         } else {
             return false ;
@@ -43,7 +43,7 @@ void new_window(lua_State* L, AXUIElementRef win) {
     Class HSW = NSClassFromString(@"HSwindow") ;
     if (HSW) {
         id obj = [[HSW alloc] initWithAXUIElementRef:win] ;
-        [[LuaSkin shared] pushNSObject:obj] ;
+        [[LuaSkin sharedWithState:L] pushNSObject:obj] ;
     } else {
         AXUIElementRef* winptr = lua_newuserdata(L, sizeof(AXUIElementRef));
         *winptr = win;
@@ -74,7 +74,7 @@ void new_window(lua_State* L, AXUIElementRef win) {
 
 // AXTextMarkerRef, and AXTextMarkerRangeRef mentioned as well, but private, so... no joy for now.
 static int pushCFTypeHamster(lua_State *L, CFTypeRef theItem, NSMutableDictionary *alreadySeen, int refTable) {
-    LuaSkin *skin = [LuaSkin shared] ;
+    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
 
     if (!theItem) {
         lua_pushnil(L) ;
@@ -219,7 +219,7 @@ static lua_Integer countn (lua_State *L, int idx) {
 
 // AXTextMarkerRef, and AXTextMarkerRangeRef mentioned as well, but private, so... no joy for now.
 static CFTypeRef lua_toCFTypeHamster(lua_State *L, int idx, NSMutableDictionary *seen) {
-    LuaSkin *skin = [LuaSkin shared] ;
+    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     int index = lua_absindex(L, idx) ;
 
     CFTypeRef value = kCFNull ;
@@ -383,7 +383,7 @@ static CFTypeRef lua_toCFTypeHamster(lua_State *L, int idx, NSMutableDictionary 
 }
 
 int pushCFTypeToLua(lua_State *L, CFTypeRef theItem, int refTable) {
-    LuaSkin *skin = [LuaSkin shared];
+    LuaSkin *skin = [LuaSkin sharedWithState:L];
     NSMutableDictionary *alreadySeen = [[NSMutableDictionary alloc] init] ;
     pushCFTypeHamster(L, theItem, alreadySeen, refTable) ;
     for (id entry in alreadySeen) {
