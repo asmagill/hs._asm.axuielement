@@ -12,11 +12,12 @@
 extern AXError _AXUIElementGetWindow(AXUIElementRef, CGWindowID* out) ;
 
 BOOL new_application(lua_State* L, pid_t pid) {
+    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     Class HSA = NSClassFromString(@"HSapplication") ;
     if (HSA) {
         id obj = [[HSA alloc] initWithPid:pid] ;
         if (obj) {
-            [[LuaSkin sharedWithState:L] pushNSObject:obj] ;
+            [skin pushNSObject:obj] ;
             return true ;
         } else {
             return false ;
@@ -40,10 +41,11 @@ BOOL new_application(lua_State* L, pid_t pid) {
 }
 
 void new_window(lua_State* L, AXUIElementRef win) {
+    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     Class HSW = NSClassFromString(@"HSwindow") ;
     if (HSW) {
         id obj = [[HSW alloc] initWithAXUIElementRef:win] ;
-        [[LuaSkin sharedWithState:L] pushNSObject:obj] ;
+        [skin pushNSObject:obj] ;
     } else {
         AXUIElementRef* winptr = lua_newuserdata(L, sizeof(AXUIElementRef));
         *winptr = win;
@@ -83,25 +85,29 @@ static int pushCFTypeHamster(lua_State *L, CFTypeRef theItem, NSMutableDictionar
 
     CFTypeID theType = CFGetTypeID(theItem) ;
     if      (theType == CFArrayGetTypeID()) {
-        if (alreadySeen[(__bridge id)theItem]) {
-            [skin pushLuaRef:refTable ref:[alreadySeen[(__bridge id)theItem] intValue]] ;
+        NSNumber *seenRef = alreadySeen[(__bridge id)theItem] ;
+        if (seenRef) {
+            [skin pushLuaRef:refTable ref:seenRef.intValue] ;
             return 1 ;
         }
         lua_newtable(L) ;
-        alreadySeen[(__bridge id)theItem] = [NSNumber numberWithInt:[skin luaRef:refTable]] ;
-        [skin pushLuaRef:refTable ref:[alreadySeen[(__bridge id)theItem] intValue]] ; // put it back on the stack
+        seenRef = [NSNumber numberWithInt:[skin luaRef:refTable]] ;
+        alreadySeen[(__bridge id)theItem] = seenRef ;
+        [skin pushLuaRef:refTable ref:seenRef.intValue] ; // put it back on the stack
         for(id thing in (__bridge NSArray *)theItem) {
             pushCFTypeHamster(L, (__bridge CFTypeRef)thing, alreadySeen, refTable) ;
             lua_rawseti(L, -2, luaL_len(L, -2) + 1) ;
         }
     } else if (theType == CFDictionaryGetTypeID()) {
-        if (alreadySeen[(__bridge id)theItem]) {
-            [skin pushLuaRef:refTable ref:[alreadySeen[(__bridge id)theItem] intValue]] ;
+        NSNumber *seenRef = alreadySeen[(__bridge id)theItem] ;
+        if (seenRef) {
+            [skin pushLuaRef:refTable ref:seenRef.intValue] ;
             return 1 ;
         }
         lua_newtable(L) ;
-        alreadySeen[(__bridge id)theItem] = [NSNumber numberWithInt:[skin luaRef:refTable]] ;
-        [skin pushLuaRef:refTable ref:[alreadySeen[(__bridge id)theItem] intValue]] ; // put it back on the stack
+        seenRef = [NSNumber numberWithInt:[skin luaRef:refTable]] ;
+        alreadySeen[(__bridge id)theItem] = seenRef ;
+        [skin pushLuaRef:refTable ref:seenRef.intValue] ; // put it back on the stack
         NSArray *keys = [(__bridge NSDictionary *)theItem allKeys] ;
         NSArray *values = [(__bridge NSDictionary *)theItem allValues] ;
         for (unsigned long i = 0 ; i < [keys count] ; i++) {
@@ -234,7 +240,7 @@ static CFTypeRef lua_toCFTypeHamster(lua_State *L, int idx, NSMutableDictionary 
     } else if (lua_absindex(L, lua_gettop(L)) >= index) {
         int theType = lua_type(L, index) ;
         if (theType == LUA_TSTRING) {
-            id holder = [skin toNSObjectAtIndex:index] ;
+            NSObject *holder = [skin toNSObjectAtIndex:index] ;
             if ([holder isKindOfClass:[NSString class]]) {
                 value = (__bridge_retained CFStringRef)holder ;
             } else {
@@ -387,7 +393,8 @@ int pushCFTypeToLua(lua_State *L, CFTypeRef theItem, int refTable) {
     NSMutableDictionary *alreadySeen = [[NSMutableDictionary alloc] init] ;
     pushCFTypeHamster(L, theItem, alreadySeen, refTable) ;
     for (id entry in alreadySeen) {
-        [skin luaUnref:refTable ref:[alreadySeen[entry] intValue]] ;
+        NSNumber *seenRef = alreadySeen[entry] ;
+        [skin luaUnref:refTable ref:seenRef.intValue] ;
     }
     return 1 ;
 }

@@ -2,6 +2,8 @@
 
 static int refTable = LUA_NOREF ;
 
+static NSMutableSet *backgroundCallbacks ;
+
 #pragma mark - Support Functions
 
 int pushAXUIElement(lua_State *L, AXUIElementRef theElement) {
@@ -79,7 +81,7 @@ static void getAllAXUIElements_searchHamster(CFTypeRef theRef, BOOL includeParen
         CFArrayRef attributeNames ;
         AXError errorState = AXUIElementCopyAttributeNames(theRef, &attributeNames) ;
         if (errorState == kAXErrorSuccess) {
-            for (id name in (__bridge NSArray *)attributeNames) {
+            for (NSString *name in (__bridge NSArray *)attributeNames) {
                 if ((![name isEqualToString:(__bridge NSString *)kAXTopLevelUIElementAttribute] &&
                     ![name isEqualToString:(__bridge NSString *)kAXParentAttribute]) || includeParents) {
                     CFTypeRef value ;
@@ -652,24 +654,31 @@ static int getAllAXUIElements(lua_State *L) {
     if (usesCallback) {
         lua_pushvalue(L, lua_gettop(L)) ;
         int callbackRef = [skin luaRef:refTable] ;
+        [backgroundCallbacks addObject:@(callbackRef)] ;
         dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
             getAllAXUIElements_searchHamster(theRef, includeParents, results) ;
             dispatch_async(dispatch_get_main_queue(), ^{
-                [skin pushLuaRef:refTable ref:callbackRef] ;
-                CFIndex arraySize = CFArrayGetCount(results) ;
-                lua_newtable(L) ;
-                for (CFIndex i = 0 ; i < arraySize ; i++) {
-                    pushAXUIElement(L, CFArrayGetValueAtIndex(results, i)) ;
-                    lua_rawseti(L, -2, luaL_len(L, -2) + 1) ;
+                if ([backgroundCallbacks containsObject:@(callbackRef)]) {
+                    LuaSkin *_skin = [LuaSkin sharedWithState:NULL] ;
+                    lua_State *_L = _skin.L ;
+
+                    [_skin pushLuaRef:refTable ref:callbackRef] ;
+                    CFIndex arraySize = CFArrayGetCount(results) ;
+                    lua_newtable(_L) ;
+                    for (CFIndex i = 0 ; i < arraySize ; i++) {
+                        pushAXUIElement(_L, CFArrayGetValueAtIndex(results, i)) ;
+                        lua_rawseti(_L, -2, luaL_len(_L, -2) + 1) ;
+                    }
+                    luaL_getmetatable(_L, USERDATA_TAG ".elementSearchTable") ;
+                    lua_setmetatable(_L, -2) ;
+                    CFRelease(results) ;
+                    if (![_skin protectedCallAndTraceback:1 nresults:0]) {
+                        [_skin logError:[NSString stringWithFormat:@"%s:callback error:%s", USERDATA_TAG, lua_tostring(_L, -1)]] ;
+                        lua_pop(_L, 1) ;
+                    }
+                    [_skin luaUnref:refTable ref:callbackRef] ;
+                    [backgroundCallbacks removeObject:@(callbackRef)] ;
                 }
-                luaL_getmetatable(L, USERDATA_TAG ".elementSearchTable") ;
-                lua_setmetatable(L, -2) ;
-                CFRelease(results) ;
-                if (![skin protectedCallAndTraceback:1 nresults:0]) {
-                    [skin logError:[NSString stringWithFormat:@"%s:callback error:%s", USERDATA_TAG, lua_tostring(L, -1)]] ;
-                    lua_pop(L, 1) ;
-                }
-                [skin luaUnref:refTable ref:callbackRef] ;
             });
         });
         lua_pushvalue(L, 1) ;
@@ -1143,9 +1152,14 @@ static int userdata_eq(lua_State* L) {
     return 1 ;
 }
 
-// static int meta_gc(lua_State* __unused L) {
-//     return 0 ;
-// }
+static int meta_gc(lua_State* L) {
+    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    [backgroundCallbacks enumerateObjectsUsingBlock:^(NSNumber *ref, __unused BOOL *stop) {
+        [skin luaUnref:refTable ref:ref.intValue] ;
+    }] ;
+    [backgroundCallbacks removeAllObjects] ;
+    return 0 ;
+}
 
 // Metatable for userdata objects
 static const luaL_Reg userdata_metaLib[] = {
@@ -1202,17 +1216,17 @@ static luaL_Reg moduleLib[] = {
     {NULL,                       NULL}
 } ;
 
-// // Metatable for module, if needed
-// static const luaL_Reg module_metaLib[] = {
-//     {"__gc", meta_gc},
-//     {NULL,   NULL}
-// } ;
+// Metatable for module, if needed
+static const luaL_Reg module_metaLib[] = {
+    {"__gc", meta_gc},
+    {NULL,   NULL}
+} ;
 
 int luaopen_hs__asm_axuielement_internal(lua_State* L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     refTable = [skin registerLibraryWithObject:USERDATA_TAG
                                      functions:moduleLib
-                                 metaFunctions:nil
+                                 metaFunctions:module_metaLib
                                objectFunctions:userdata_metaLib] ;
 
     luaopen_hs__asm_axuielement_observer(L) ; lua_setfield(L, -2, "observer") ;
@@ -1230,5 +1244,6 @@ int luaopen_hs__asm_axuielement_internal(lua_State* L) {
     pushSubrolesTable(L) ;                lua_setfield(L, -2, "subroles") ;
     pushDirectionsTable(L) ;              lua_setfield(L, -2, "directions") ;
 
+    backgroundCallbacks = [NSMutableSet set] ;
     return 1 ;
 }
