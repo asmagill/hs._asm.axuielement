@@ -655,9 +655,9 @@ static int getAllAXUIElements(lua_State *L) {
         lua_pushvalue(L, lua_gettop(L)) ;
         int callbackRef = [skin luaRef:refTable] ;
         [backgroundCallbacks addObject:@(callbackRef)] ;
-        dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        dispatch_async(dispatch_get_main_queue(), ^{
             getAllAXUIElements_searchHamster(theRef, includeParents, results) ;
-            dispatch_async(dispatch_get_main_queue(), ^{
+//             dispatch_async(dispatch_get_main_queue(), ^{
                 if ([backgroundCallbacks containsObject:@(callbackRef)]) {
                     LuaSkin *_skin = [LuaSkin shared] ;
                     lua_State *_L = _skin.L ;
@@ -679,7 +679,7 @@ static int getAllAXUIElements(lua_State *L) {
                     [_skin luaUnref:refTable ref:callbackRef] ;
                     [backgroundCallbacks removeObject:@(callbackRef)] ;
                 }
-            });
+//             });
         });
         lua_pushvalue(L, 1) ;
     } else {
