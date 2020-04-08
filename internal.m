@@ -120,7 +120,21 @@ static void getAllAXUIElements_searchHamster(CFTypeRef theRef, BOOL includeParen
 ///
 /// Returns:
 ///  * an axuielementObject for the window specified
-static int getWindowElement(lua_State *L)      { return pushAXUIElement(L, get_axuielementref(L, 1, "hs.window")) ; }
+static int getWindowElement(lua_State *L)      {
+    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    // vararg here to mimic original behavior and allow constructs to use `hs.window(...)` as arg as this may
+    // return more than one result
+    [skin checkArgs:LS_TUSERDATA, "hs.window", LS_TBREAK | LS_TVARARG] ;
+    NSObject *object = [skin toNSObjectAtIndex:1] ;
+    AXUIElementRef ref = getElementRefPropertyFromClassObject(object) ;
+    if (ref) {
+        pushAXUIElement(L, ref) ;
+        CFRelease(ref) ;
+    } else {
+        lua_pushnil(L) ;
+    }
+    return 1 ;
+}
 
 /// hs._asm.axuielement.applicationElement(applicationObject) -> axuielementObject
 /// Constructor
@@ -131,7 +145,21 @@ static int getWindowElement(lua_State *L)      { return pushAXUIElement(L, get_a
 ///
 /// Returns:
 ///  * an axuielementObject for the application specified
-static int getApplicationElement(lua_State *L) { return pushAXUIElement(L, get_axuielementref(L, 1, "hs.application")) ; }
+static int getApplicationElement(lua_State *L) {
+    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    // vararg here to mimic original behavior and allow constructs to use `hs.application(...)` as arg as this may
+    // return more than one result
+    [skin checkArgs:LS_TUSERDATA, "hs.application", LS_TBREAK | LS_TVARARG] ;
+    NSObject *object = [skin toNSObjectAtIndex:1] ;
+    AXUIElementRef ref = getElementRefPropertyFromClassObject(object) ;
+    if (ref) {
+        pushAXUIElement(L, ref) ;
+        CFRelease(ref) ;
+    } else {
+        lua_pushnil(L) ;
+    }
+    return 1 ;
+}
 
 /// hs._asm.axuielement.systemWideElement() -> axuielementObject
 /// Constructor
@@ -721,7 +749,7 @@ static int axuielementToApplication(lua_State *L) {
         pid_t thePid ;
         AXError errorState2 = AXUIElementGetPid(theRef, &thePid) ;
         if (errorState2 == kAXErrorSuccess) {
-            if (!new_application(L, thePid)) lua_pushnil(L) ;
+            new_application(L, thePid) ;
         } else {
             lua_pushnil(L) ;
         }
@@ -753,7 +781,7 @@ static int axuielementToWindow(lua_State *L) {
     if ((errorState == kAXErrorSuccess) &&
         (CFGetTypeID(value) == CFStringGetTypeID()) &&
         ([(__bridge NSString *)value isEqualToString:(__bridge NSString *)kAXWindowRole])) {
-        new_window(L, CFRetain(theRef)) ;
+        new_window(L, theRef) ;
     } else {
         lua_pushnil(L) ;
     }

@@ -12,8 +12,10 @@
 #define get_axobserverref(L, idx, tag) *((AXObserverRef*)luaL_checkudata(L, idx, tag))
 
 
+extern AXUIElementRef getElementRefPropertyFromClassObject(NSObject *object) ;
+
 extern BOOL new_application(lua_State* L, pid_t pid) ;
-extern void new_window(lua_State* L, AXUIElementRef win) ;
+extern BOOL new_window(lua_State* L, AXUIElementRef win) ;
 
 extern int pushAXUIElement(lua_State *L, AXUIElementRef theElement) ;
 extern int pushAXObserver(lua_State *L, AXObserverRef theObserver) ;
