@@ -51,6 +51,8 @@ BOOL new_window(lua_State* L, AXUIElementRef win) {
     if (HSW) {
         NSObject *obj = [[HSW alloc] initWithAXUIElementRef:win] ;
         if (obj) {
+            // the HSapplication initializer retains its elementRef; the HSwindow one doesn't
+            CFRetain(win) ;
             [skin pushNSObject:obj] ;
             isGood = true ;
         } else {
