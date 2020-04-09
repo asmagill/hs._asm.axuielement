@@ -3,7 +3,7 @@
 // keep this current with Hammerspoon's method for creating new hs.application and hs.window objects
 
 @protocol PlaceHoldersHSuicoreMethods
-- (NSObject *)initWithPid:(pid_t)pid ;
+- (NSObject *)initWithPid:(pid_t)pid withState:(lua_State *)L ;
 - (NSObject *)initWithAXUIElementRef:(AXUIElementRef)winRef ;
 @end
 
@@ -30,7 +30,7 @@ BOOL new_application(lua_State* L, pid_t pid) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     Class HSA = NSClassFromString(@"HSapplication") ;
     if (HSA) {
-        NSObject *obj = [[HSA alloc] initWithPid:pid] ;
+        NSObject *obj = [[HSA alloc] initWithPid:pid withState:L] ;
         if (obj) {
             [skin pushNSObject:obj] ;
             isGood = true ;
