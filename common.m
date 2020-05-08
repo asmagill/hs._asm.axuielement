@@ -204,18 +204,6 @@ static int pushCFTypeHamster(lua_State *L, CFTypeRef theItem, NSMutableDictionar
     return 1 ;
 }
 
-// gets the count of items in a table irrespective of whether they are keyed or indexed
-static lua_Integer countn (lua_State *L, int idx) {
-  lua_Integer max = 0;
-  luaL_checktype(L, idx, LUA_TTABLE);
-  lua_pushnil(L);  /* first key */
-  while (lua_next(L, idx)) {
-    lua_pop(L, 1);  /* remove value */
-    max++ ;
-  }
-  return max ;
-}
-
 // AXTextMarkerRef, and AXTextMarkerRangeRef mentioned as well, but private, so... no joy for now.
 static CFTypeRef lua_toCFTypeHamster(lua_State *L, int idx, NSMutableDictionary *seen) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
@@ -336,7 +324,7 @@ static CFTypeRef lua_toCFTypeHamster(lua_State *L, int idx, NSMutableDictionary 
                 lua_pop(L, 1) ;
             } else {                            // real CFDictionary or CFArray
               seen[[NSValue valueWithPointer:lua_topointer(L, index)]] = @(YES) ;
-              if (luaL_len(L, index) == countn(L, index)) { // CFArray
+              if (luaL_len(L, index) == [skin countNatIndex:index]) { // CFArray
                   CFMutableArrayRef holder = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks) ;
                   for (lua_Integer i = 0 ; i < luaL_len(L, index) ; i++ ) {
                       lua_geti(L, index, i + 1) ;
