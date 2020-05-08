@@ -790,6 +790,21 @@ static int axuielementToWindow(lua_State *L) {
     return 1 ;
 }
 
+/// hs._asm.axuielement:setTimeout(value) -> axuielementObject
+/// Method
+/// Sets the timeout value used accessibility queries performed from this element.
+///
+/// Parameters:
+///  * `value` - the number of seconds for the new timeout value.
+///
+/// Returns:
+///  * the axuielementObject
+///
+/// Notes:
+///  * To change the global timeout affecting all queries on elements which do not have a specific timeout set, use this method on the systemwide element (see [hs._asm.axuielement.systemWideElement](#systemWideElement).
+///  * Changing the timeout value for an axuielement object only changes the value for that specific element -- other axuieleement objects that may refere to the identical accessibiity item are not affected.
+///
+///  * Setting the value to 0.0 resets the timeout -- if applied to the `systemWideElement`, the global default will be reset to its default value; if applied to another axuielement object, the timeout will be reset to the current global value as applied to the systemWideElement.
 static int axuielement_setTimeout(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TNUMBER, LS_TBREAK] ;
@@ -927,7 +942,8 @@ static int pushSubrolesTable(lua_State *L) {
     [skin pushNSObject:(__bridge NSString *)kAXSwitchSubrole] ;                  lua_setfield(L, -2, "switch") ;
     [skin pushNSObject:(__bridge NSString *)kAXTimelineSubrole] ;                lua_setfield(L, -2, "timeline") ;
     [skin pushNSObject:(__bridge NSString *)kAXToggleSubrole] ;                  lua_setfield(L, -2, "toggle") ;
-    return 1 ;
+    [skin pushNSObject:(__bridge NSString *)kAXDecorativeSubrole] ;              lua_setfield(L, -2, "decorative") ;
+   return 1 ;
 }
 
 /// hs._asm.axuielement.attributes[]
@@ -953,28 +969,32 @@ static int pushAttributesTable(lua_State *L) {
     lua_newtable(L) ;
 //General attributes
     lua_newtable(L) ;
-    [skin pushNSObject:(__bridge NSString *)kAXRoleAttribute] ;              lua_setfield(L, -2, "role") ;
-    [skin pushNSObject:(__bridge NSString *)kAXSubroleAttribute] ;           lua_setfield(L, -2, "subrole") ;
-    [skin pushNSObject:(__bridge NSString *)kAXRoleDescriptionAttribute] ;   lua_setfield(L, -2, "roleDescription") ;
-    [skin pushNSObject:(__bridge NSString *)kAXHelpAttribute] ;              lua_setfield(L, -2, "help") ;
-    [skin pushNSObject:(__bridge NSString *)kAXTitleAttribute] ;             lua_setfield(L, -2, "title") ;
-    [skin pushNSObject:(__bridge NSString *)kAXValueAttribute] ;             lua_setfield(L, -2, "value") ;
-    [skin pushNSObject:(__bridge NSString *)kAXMinValueAttribute] ;          lua_setfield(L, -2, "minValue") ;
-    [skin pushNSObject:(__bridge NSString *)kAXMaxValueAttribute] ;          lua_setfield(L, -2, "maxValue") ;
-    [skin pushNSObject:(__bridge NSString *)kAXValueIncrementAttribute] ;    lua_setfield(L, -2, "valueIncrement") ;
-    [skin pushNSObject:(__bridge NSString *)kAXAllowedValuesAttribute] ;     lua_setfield(L, -2, "allowedValues") ;
-    [skin pushNSObject:(__bridge NSString *)kAXEnabledAttribute] ;           lua_setfield(L, -2, "enabled") ;
-    [skin pushNSObject:(__bridge NSString *)kAXFocusedAttribute] ;           lua_setfield(L, -2, "focused") ;
-    [skin pushNSObject:(__bridge NSString *)kAXParentAttribute] ;            lua_setfield(L, -2, "parent") ;
-    [skin pushNSObject:(__bridge NSString *)kAXChildrenAttribute] ;          lua_setfield(L, -2, "children") ;
-    [skin pushNSObject:(__bridge NSString *)kAXSelectedChildrenAttribute] ;  lua_setfield(L, -2, "selectedChildren") ;
-    [skin pushNSObject:(__bridge NSString *)kAXVisibleChildrenAttribute] ;   lua_setfield(L, -2, "visibleChildren") ;
-    [skin pushNSObject:(__bridge NSString *)kAXWindowAttribute] ;            lua_setfield(L, -2, "window") ;
-    [skin pushNSObject:(__bridge NSString *)kAXTopLevelUIElementAttribute] ; lua_setfield(L, -2, "topLevelUIElement") ;
-    [skin pushNSObject:(__bridge NSString *)kAXPositionAttribute] ;          lua_setfield(L, -2, "position") ;
-    [skin pushNSObject:(__bridge NSString *)kAXSizeAttribute] ;              lua_setfield(L, -2, "size") ;
-    [skin pushNSObject:(__bridge NSString *)kAXOrientationAttribute] ;       lua_setfield(L, -2, "orientation") ;
-    [skin pushNSObject:(__bridge NSString *)kAXDescriptionAttribute] ;       lua_setfield(L, -2, "description") ;
+    [skin pushNSObject:(__bridge NSString *)kAXRoleAttribute] ;                 lua_setfield(L, -2, "role") ;
+    [skin pushNSObject:(__bridge NSString *)kAXSubroleAttribute] ;              lua_setfield(L, -2, "subrole") ;
+    [skin pushNSObject:(__bridge NSString *)kAXRoleDescriptionAttribute] ;      lua_setfield(L, -2, "roleDescription") ;
+    [skin pushNSObject:(__bridge NSString *)kAXHelpAttribute] ;                 lua_setfield(L, -2, "help") ;
+    [skin pushNSObject:(__bridge NSString *)kAXTitleAttribute] ;                lua_setfield(L, -2, "title") ;
+    [skin pushNSObject:(__bridge NSString *)kAXValueAttribute] ;                lua_setfield(L, -2, "value") ;
+    [skin pushNSObject:(__bridge NSString *)kAXValueDescriptionAttribute] ;     lua_setfield(L, -2, "valueDescription") ;
+    [skin pushNSObject:(__bridge NSString *)kAXMinValueAttribute] ;             lua_setfield(L, -2, "minValue") ;
+    [skin pushNSObject:(__bridge NSString *)kAXMaxValueAttribute] ;             lua_setfield(L, -2, "maxValue") ;
+    [skin pushNSObject:(__bridge NSString *)kAXValueIncrementAttribute] ;       lua_setfield(L, -2, "valueIncrement") ;
+    [skin pushNSObject:(__bridge NSString *)kAXAllowedValuesAttribute] ;        lua_setfield(L, -2, "allowedValues") ;
+    [skin pushNSObject:(__bridge NSString *)kAXEnabledAttribute] ;              lua_setfield(L, -2, "enabled") ;
+    [skin pushNSObject:(__bridge NSString *)kAXFocusedAttribute] ;              lua_setfield(L, -2, "focused") ;
+    [skin pushNSObject:(__bridge NSString *)kAXParentAttribute] ;               lua_setfield(L, -2, "parent") ;
+    [skin pushNSObject:(__bridge NSString *)kAXChildrenAttribute] ;             lua_setfield(L, -2, "children") ;
+    [skin pushNSObject:(__bridge NSString *)kAXSelectedChildrenAttribute] ;     lua_setfield(L, -2, "selectedChildren") ;
+    [skin pushNSObject:(__bridge NSString *)kAXVisibleChildrenAttribute] ;      lua_setfield(L, -2, "visibleChildren") ;
+    [skin pushNSObject:(__bridge NSString *)kAXWindowAttribute] ;               lua_setfield(L, -2, "window") ;
+    [skin pushNSObject:(__bridge NSString *)kAXTopLevelUIElementAttribute] ;    lua_setfield(L, -2, "topLevelUIElement") ;
+    [skin pushNSObject:(__bridge NSString *)kAXPositionAttribute] ;             lua_setfield(L, -2, "position") ;
+    [skin pushNSObject:(__bridge NSString *)kAXSizeAttribute] ;                 lua_setfield(L, -2, "size") ;
+    [skin pushNSObject:(__bridge NSString *)kAXOrientationAttribute] ;          lua_setfield(L, -2, "orientation") ;
+    [skin pushNSObject:(__bridge NSString *)kAXDescriptionAttribute] ;          lua_setfield(L, -2, "description") ;
+    [skin pushNSObject:(__bridge NSString *)kAXPlaceholderValueAttribute] ;     lua_setfield(L, -2, "placeholderValue") ;
+    [skin pushNSObject:(__bridge NSString *)kAXSharedFocusElementsAttribute] ;  lua_setfield(L, -2, "sharedFocusElements") ;
+    [skin pushNSObject:(__bridge NSString *)kAXIdentifierAttribute] ;           lua_setfield(L, -2, "identifier") ;
     lua_setfield(L, -2, "general") ;
 // Text-specific attributes
     lua_newtable(L) ;
@@ -984,20 +1004,22 @@ static int pushAttributesTable(lua_State *L) {
     [skin pushNSObject:(__bridge NSString *)kAXNumberOfCharactersAttribute] ;    lua_setfield(L, -2, "numberOfCharacters") ;
     [skin pushNSObject:(__bridge NSString *)kAXSharedTextUIElementsAttribute] ;  lua_setfield(L, -2, "sharedTextUIElements") ;
     [skin pushNSObject:(__bridge NSString *)kAXSharedCharacterRangeAttribute] ;  lua_setfield(L, -2, "sharedCharacterRange") ;
+    [skin pushNSObject:(__bridge NSString *)kAXSelectedTextRangesAttribute] ;    lua_setfield(L, -2, "selectedTextRanges") ;
     lua_setfield(L, -2, "text") ;
 // Window-specific attributes
     lua_newtable(L) ;
-    [skin pushNSObject:(__bridge NSString *)kAXMainAttribute] ;           lua_setfield(L, -2, "main") ;
-    [skin pushNSObject:(__bridge NSString *)kAXMinimizedAttribute] ;      lua_setfield(L, -2, "minimized") ;
-    [skin pushNSObject:(__bridge NSString *)kAXCloseButtonAttribute] ;    lua_setfield(L, -2, "closeButton") ;
-    [skin pushNSObject:(__bridge NSString *)kAXZoomButtonAttribute] ;     lua_setfield(L, -2, "zoomButton") ;
-    [skin pushNSObject:(__bridge NSString *)kAXMinimizeButtonAttribute] ; lua_setfield(L, -2, "minimizeButton") ;
-    [skin pushNSObject:(__bridge NSString *)kAXToolbarButtonAttribute] ;  lua_setfield(L, -2, "toolbarButton") ;
-    [skin pushNSObject:(__bridge NSString *)kAXGrowAreaAttribute] ;       lua_setfield(L, -2, "growArea") ;
-    [skin pushNSObject:(__bridge NSString *)kAXProxyAttribute] ;          lua_setfield(L, -2, "proxy") ;
-    [skin pushNSObject:(__bridge NSString *)kAXModalAttribute] ;          lua_setfield(L, -2, "modal") ;
-    [skin pushNSObject:(__bridge NSString *)kAXDefaultButtonAttribute] ;  lua_setfield(L, -2, "defaultButton") ;
-    [skin pushNSObject:(__bridge NSString *)kAXCancelButtonAttribute] ;   lua_setfield(L, -2, "cancelButton") ;
+    [skin pushNSObject:(__bridge NSString *)kAXMainAttribute] ;             lua_setfield(L, -2, "main") ;
+    [skin pushNSObject:(__bridge NSString *)kAXMinimizedAttribute] ;        lua_setfield(L, -2, "minimized") ;
+    [skin pushNSObject:(__bridge NSString *)kAXCloseButtonAttribute] ;      lua_setfield(L, -2, "closeButton") ;
+    [skin pushNSObject:(__bridge NSString *)kAXZoomButtonAttribute] ;       lua_setfield(L, -2, "zoomButton") ;
+    [skin pushNSObject:(__bridge NSString *)kAXMinimizeButtonAttribute] ;   lua_setfield(L, -2, "minimizeButton") ;
+    [skin pushNSObject:(__bridge NSString *)kAXToolbarButtonAttribute] ;    lua_setfield(L, -2, "toolbarButton") ;
+    [skin pushNSObject:(__bridge NSString *)kAXGrowAreaAttribute] ;         lua_setfield(L, -2, "growArea") ;
+    [skin pushNSObject:(__bridge NSString *)kAXProxyAttribute] ;            lua_setfield(L, -2, "proxy") ;
+    [skin pushNSObject:(__bridge NSString *)kAXModalAttribute] ;            lua_setfield(L, -2, "modal") ;
+    [skin pushNSObject:(__bridge NSString *)kAXDefaultButtonAttribute] ;    lua_setfield(L, -2, "defaultButton") ;
+    [skin pushNSObject:(__bridge NSString *)kAXCancelButtonAttribute] ;     lua_setfield(L, -2, "cancelButton") ;
+    [skin pushNSObject:(__bridge NSString *)kAXFullScreenButtonAttribute] ; lua_setfield(L, -2, "fullScreenButton") ;
     lua_setfield(L, -2, "window") ;
 // Menu-specific attributes
     lua_newtable(L) ;
@@ -1017,6 +1039,7 @@ static int pushAttributesTable(lua_State *L) {
     [skin pushNSObject:(__bridge NSString *)kAXMainWindowAttribute] ;       lua_setfield(L, -2, "mainWindow") ;
     [skin pushNSObject:(__bridge NSString *)kAXFocusedWindowAttribute] ;    lua_setfield(L, -2, "focusedWindow") ;
     [skin pushNSObject:(__bridge NSString *)kAXFocusedUIElementAttribute] ; lua_setfield(L, -2, "focusedUIElement") ;
+    [skin pushNSObject:(__bridge NSString *)kAXExtrasMenuBarAttribute] ;    lua_setfield(L, -2, "extrasMenuBar") ;
     lua_setfield(L, -2, "application") ;
 // Miscellaneous attributes
     lua_newtable(L) ;
@@ -1053,6 +1076,8 @@ static int pushAttributesTable(lua_State *L) {
     [skin pushNSObject:(__bridge NSString *)kAXShownMenuUIElementAttribute] ;         lua_setfield(L, -2, "shownMenuUIElement") ;
     [skin pushNSObject:(__bridge NSString *)kAXServesAsTitleForUIElementsAttribute] ; lua_setfield(L, -2, "servesAsTitleForUIElements") ;
     [skin pushNSObject:(__bridge NSString *)kAXLinkedUIElementsAttribute] ;           lua_setfield(L, -2, "linkedUIElements") ;
+    [skin pushNSObject:(__bridge NSString *)kAXAlternateUIVisibleAttribute] ;         lua_setfield(L, -2, "alternateUIVisible") ;
+    [skin pushNSObject:(__bridge NSString *)kAXElementBusyAttribute] ;                lua_setfield(L, -2, "elementBusy") ;
     lua_setfield(L, -2, "misc") ;
 // Table and outline view attributes
     lua_newtable(L) ;
@@ -1063,11 +1088,7 @@ static int pushAttributesTable(lua_State *L) {
     [skin pushNSObject:(__bridge NSString *)kAXVisibleColumnsAttribute] ;         lua_setfield(L, -2, "visibleColumns") ;
     [skin pushNSObject:(__bridge NSString *)kAXSelectedColumnsAttribute] ;        lua_setfield(L, -2, "selectedColumns") ;
     [skin pushNSObject:(__bridge NSString *)kAXSortDirectionAttribute] ;          lua_setfield(L, -2, "sortDirection") ;
-    [skin pushNSObject:(__bridge NSString *)kAXColumnHeaderUIElementsAttribute] ; lua_setfield(L, -2, "columnHeaderUIElements") ;
     [skin pushNSObject:(__bridge NSString *)kAXIndexAttribute] ;                  lua_setfield(L, -2, "index") ;
-    [skin pushNSObject:(__bridge NSString *)kAXDisclosingAttribute] ;             lua_setfield(L, -2, "disclosing") ;
-    [skin pushNSObject:(__bridge NSString *)kAXDisclosedRowsAttribute] ;          lua_setfield(L, -2, "disclosedRows") ;
-    [skin pushNSObject:(__bridge NSString *)kAXDisclosedByRowAttribute] ;         lua_setfield(L, -2, "disclosedByRow") ;
     lua_setfield(L, -2, "table") ;
 // Matte attributes
     lua_newtable(L) ;
@@ -1082,6 +1103,87 @@ static int pushAttributesTable(lua_State *L) {
     lua_newtable(L) ;
     [skin pushNSObject:(__bridge NSString *)kAXFocusedApplicationAttribute] ; lua_setfield(L, -2, "focusedApplication") ;
     lua_setfield(L, -2, "system") ;
+// search field attributes
+    lua_newtable(L) ;
+    [skin pushNSObject:(__bridge NSString *)kAXClearButtonAttribute] ;  lua_setfield(L, -2, "clearButton") ;
+    [skin pushNSObject:(__bridge NSString *)kAXSearchButtonAttribute] ; lua_setfield(L, -2, "searchButton") ;
+    lua_setfield(L, -2, "searchField") ;
+// grid attributes
+    lua_newtable(L) ;
+    [skin pushNSObject:(__bridge NSString *)kAXColumnCountAttribute] ;  lua_setfield(L, -2, "columnCount") ;
+    [skin pushNSObject:(__bridge NSString *)kAXRowCountAttribute] ;     lua_setfield(L, -2, "rowCount") ;
+    [skin pushNSObject:(__bridge NSString *)kAXOrderedByRowAttribute] ; lua_setfield(L, -2, "orderedByRow") ;
+    lua_setfield(L, -2, "grid") ;
+// cell attributes
+    lua_newtable(L) ;
+    [skin pushNSObject:(__bridge NSString *)kAXColumnIndexRangeAttribute] ; lua_setfield(L, -2, "columnIndexRange") ;
+    [skin pushNSObject:(__bridge NSString *)kAXRowIndexRangeAttribute] ;    lua_setfield(L, -2, "rowIndexRange") ;
+    lua_setfield(L, -2, "cell") ;
+// obsolete/unknown attributes
+    lua_newtable(L) ;
+    [skin pushNSObject:(__bridge NSString *)kAXColumnTitlesAttribute] ; lua_setfield(L, -2, "columnTitles") ;
+    [skin pushNSObject:(__bridge NSString *)kAXIsEditableAttribute] ;   lua_setfield(L, -2, "isEditable") ;
+    [skin pushNSObject:(__bridge NSString *)kAXVisibleTextAttribute] ;  lua_setfield(L, -2, "visibleText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXTextAttribute] ;         lua_setfield(L, -2, "text") ;
+    lua_setfield(L, -2, "obsolete") ;
+// level indicator attributes
+    lua_newtable(L) ;
+    [skin pushNSObject:(__bridge NSString *)kAXCriticalValueAttribute] ; lua_setfield(L, -2, "criticalValue") ;
+    [skin pushNSObject:(__bridge NSString *)kAXWarningValueAttribute] ;  lua_setfield(L, -2, "warningValue") ;
+    lua_setfield(L, -2, "level") ;
+// outline attributes
+    lua_newtable(L) ;
+    [skin pushNSObject:(__bridge NSString *)kAXDisclosureLevelAttribute] ;        lua_setfield(L, -2, "disclosureLevel") ;
+    [skin pushNSObject:(__bridge NSString *)kAXDisclosingAttribute] ;             lua_setfield(L, -2, "disclosing") ;
+    [skin pushNSObject:(__bridge NSString *)kAXDisclosedRowsAttribute] ;          lua_setfield(L, -2, "disclosedRows") ;
+    [skin pushNSObject:(__bridge NSString *)kAXDisclosedByRowAttribute] ;         lua_setfield(L, -2, "disclosedByRow") ;
+    lua_setfield(L, -2, "outline") ;
+// layout area attributes
+    lua_newtable(L) ;
+    [skin pushNSObject:(__bridge NSString *)kAXHandlesAttribute] ;                   lua_setfield(L, -2, "handles") ;
+    [skin pushNSObject:(__bridge NSString *)kAXHorizontalUnitDescriptionAttribute] ; lua_setfield(L, -2, "horizontalUnitDescription") ;
+    [skin pushNSObject:(__bridge NSString *)kAXHorizontalUnitsAttribute] ;           lua_setfield(L, -2, "horizontalUnits") ;
+    [skin pushNSObject:(__bridge NSString *)kAXVerticalUnitDescriptionAttribute] ;   lua_setfield(L, -2, "verticalUnitDescription") ;
+    [skin pushNSObject:(__bridge NSString *)kAXVerticalUnitsAttribute] ;             lua_setfield(L, -2, "verticalUnits") ;
+    lua_setfield(L, -2, "layout") ;
+// ruler-specific attributes
+    lua_newtable(L) ;
+    [skin pushNSObject:(__bridge NSString *)kAXMarkerTypeAttribute] ;            lua_setfield(L, -2, "markerType") ;
+    [skin pushNSObject:(__bridge NSString *)kAXMarkerTypeDescriptionAttribute] ; lua_setfield(L, -2, "markerTypeDescription") ;
+    [skin pushNSObject:(__bridge NSString *)kAXMarkerUIElementsAttribute] ;      lua_setfield(L, -2, "markerUIElements") ;
+    [skin pushNSObject:(__bridge NSString *)kAXUnitDescriptionAttribute] ;       lua_setfield(L, -2, "unitDescription") ;
+    [skin pushNSObject:(__bridge NSString *)kAXUnitsAttribute] ;                 lua_setfield(L, -2, "units") ;
+    lua_setfield(L, -2, "ruler") ;
+// cell-based table attributes
+    lua_newtable(L) ;
+    [skin pushNSObject:(__bridge NSString *)kAXRowHeaderUIElementsAttribute] ;    lua_setfield(L, -2, "rowHeaderUIElements") ;
+    [skin pushNSObject:(__bridge NSString *)kAXSelectedCellsAttribute] ;          lua_setfield(L, -2, "selectedCells") ;
+    [skin pushNSObject:(__bridge NSString *)kAXVisibleCellsAttribute] ;           lua_setfield(L, -2, "visibleCells") ;
+    [skin pushNSObject:(__bridge NSString *)kAXColumnHeaderUIElementsAttribute] ; lua_setfield(L, -2, "columnHeaderUIElements") ;
+    lua_setfield(L, -2, "cell") ;
+// attributedStrings
+    lua_newtable(L) ;
+    [skin pushNSObject:(__bridge NSString *)kAXAttachmentTextAttribute] ;         lua_setfield(L, -2, "attachmentText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXAutocorrectedTextAttribute] ;      lua_setfield(L, -2, "autocorrectedText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXBackgroundColorTextAttribute] ;    lua_setfield(L, -2, "backgroundColorText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXFontTextAttribute] ;               lua_setfield(L, -2, "fontText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXForegoundColorTextAttribute] ;     lua_setfield(L, -2, "foregoundColorText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXForegroundColorTextAttribute] ;    lua_setfield(L, -2, "foregroundColorText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXLinkTextAttribute] ;               lua_setfield(L, -2, "linkText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXListItemIndexTextAttribute] ;      lua_setfield(L, -2, "listItemIndexText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXListItemLevelTextAttribute] ;      lua_setfield(L, -2, "listItemLevelText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXListItemPrefixTextAttribute] ;     lua_setfield(L, -2, "listItemPrefixText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXMarkedMisspelledTextAttribute] ;   lua_setfield(L, -2, "markedMisspelledText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXMisspelledTextAttribute] ;         lua_setfield(L, -2, "misspelledText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXNaturalLanguageTextAttribute] ;    lua_setfield(L, -2, "naturalLanguageText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXReplacementStringTextAttribute] ;  lua_setfield(L, -2, "replacementStringText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXShadowTextAttribute] ;             lua_setfield(L, -2, "shadowText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXStrikethroughColorTextAttribute] ; lua_setfield(L, -2, "strikethroughColorText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXStrikethroughTextAttribute] ;      lua_setfield(L, -2, "strikethroughText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXSuperscriptTextAttribute] ;        lua_setfield(L, -2, "superscriptText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXUnderlineColorTextAttribute] ;     lua_setfield(L, -2, "underlineColorText") ;
+    [skin pushNSObject:(__bridge NSString *)kAXUnderlineTextAttribute] ;          lua_setfield(L, -2, "underlineText") ;
+    lua_setfield(L, -2, "attributedStrings") ;
     return 1 ;
 }
 
@@ -1094,16 +1196,21 @@ static int pushAttributesTable(lua_State *L) {
 static int pushParamaterizedAttributesTable(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     lua_newtable(L) ;
-    [skin pushNSObject:(__bridge NSString *)kAXLineForIndexParameterizedAttribute] ;             lua_setfield(L, -2, "lineForIndex") ;
-    [skin pushNSObject:(__bridge NSString *)kAXRangeForLineParameterizedAttribute] ;             lua_setfield(L, -2, "rangeForLine") ;
-    [skin pushNSObject:(__bridge NSString *)kAXStringForRangeParameterizedAttribute] ;           lua_setfield(L, -2, "stringForRange") ;
-    [skin pushNSObject:(__bridge NSString *)kAXRangeForPositionParameterizedAttribute] ;         lua_setfield(L, -2, "rangeForPosition") ;
-    [skin pushNSObject:(__bridge NSString *)kAXRangeForIndexParameterizedAttribute] ;            lua_setfield(L, -2, "rangeForIndex") ;
-    [skin pushNSObject:(__bridge NSString *)kAXBoundsForRangeParameterizedAttribute] ;           lua_setfield(L, -2, "boundsForRange") ;
-    [skin pushNSObject:(__bridge NSString *)kAXRTFForRangeParameterizedAttribute] ;              lua_setfield(L, -2, "RTFForRange") ;
-    [skin pushNSObject:(__bridge NSString *)kAXAttributedStringForRangeParameterizedAttribute] ; lua_setfield(L, -2, "attributedStringForRange") ;
-    [skin pushNSObject:(__bridge NSString *)kAXStyleRangeForIndexParameterizedAttribute] ;       lua_setfield(L, -2, "styleRangeForIndex") ;
-    [skin pushNSObject:(__bridge NSString *)kAXInsertionPointLineNumberAttribute] ;              lua_setfield(L, -2, "insertionPointLineNumber") ;
+    [skin pushNSObject:(__bridge NSString *)kAXLineForIndexParameterizedAttribute] ;              lua_setfield(L, -2, "lineForIndex") ;
+    [skin pushNSObject:(__bridge NSString *)kAXRangeForLineParameterizedAttribute] ;              lua_setfield(L, -2, "rangeForLine") ;
+    [skin pushNSObject:(__bridge NSString *)kAXStringForRangeParameterizedAttribute] ;            lua_setfield(L, -2, "stringForRange") ;
+    [skin pushNSObject:(__bridge NSString *)kAXRangeForPositionParameterizedAttribute] ;          lua_setfield(L, -2, "rangeForPosition") ;
+    [skin pushNSObject:(__bridge NSString *)kAXRangeForIndexParameterizedAttribute] ;             lua_setfield(L, -2, "rangeForIndex") ;
+    [skin pushNSObject:(__bridge NSString *)kAXBoundsForRangeParameterizedAttribute] ;            lua_setfield(L, -2, "boundsForRange") ;
+    [skin pushNSObject:(__bridge NSString *)kAXRTFForRangeParameterizedAttribute] ;               lua_setfield(L, -2, "RTFForRange") ;
+    [skin pushNSObject:(__bridge NSString *)kAXAttributedStringForRangeParameterizedAttribute] ;  lua_setfield(L, -2, "attributedStringForRange") ;
+    [skin pushNSObject:(__bridge NSString *)kAXStyleRangeForIndexParameterizedAttribute] ;        lua_setfield(L, -2, "styleRangeForIndex") ;
+    [skin pushNSObject:(__bridge NSString *)kAXInsertionPointLineNumberAttribute] ;               lua_setfield(L, -2, "insertionPointLineNumber") ;
+    [skin pushNSObject:(__bridge NSString *)kAXCellForColumnAndRowParameterizedAttribute] ;       lua_setfield(L, -2, "cellForColumnAndRow") ;
+    [skin pushNSObject:(__bridge NSString *)kAXLayoutPointForScreenPointParameterizedAttribute] ; lua_setfield(L, -2, "layoutPointForScreenPoint") ;
+    [skin pushNSObject:(__bridge NSString *)kAXLayoutSizeForScreenSizeParameterizedAttribute] ;   lua_setfield(L, -2, "layoutSizeForScreenSize") ;
+    [skin pushNSObject:(__bridge NSString *)kAXScreenPointForLayoutPointParameterizedAttribute] ; lua_setfield(L, -2, "screenPointForLayoutPoint") ;
+    [skin pushNSObject:(__bridge NSString *)kAXScreenSizeForLayoutSizeParameterizedAttribute] ;   lua_setfield(L, -2, "screenSizeForLayoutSize") ;
     return 1 ;
 }
 

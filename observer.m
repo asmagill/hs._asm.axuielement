@@ -453,6 +453,7 @@ static int pushNotificationsTable(lua_State *L) {
     [skin pushNSObject:(__bridge NSString *)kAXSelectedTextChangedNotification] ;     lua_rawseti(L, -2, luaL_len(L, -2) + 1) ;
     [skin pushNSObject:(__bridge NSString *)kAXTitleChangedNotification] ;            lua_rawseti(L, -2, luaL_len(L, -2) + 1) ;
     [skin pushNSObject:(__bridge NSString *)kAXUnitsChangedNotification] ;            lua_rawseti(L, -2, luaL_len(L, -2) + 1) ;
+    [skin pushNSObject:(__bridge NSString *)kAXRowCountChangedNotification] ;         lua_rawseti(L, -2, luaL_len(L, -2) + 1) ;
 
     return 1 ;
 }
