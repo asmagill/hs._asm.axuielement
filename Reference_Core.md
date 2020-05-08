@@ -60,6 +60,7 @@ axuielement = require("hs._asm.axuielement")
 * <a href="#performAction">axuielement:performAction(action) -> axuielement | false | nil</a>
 * <a href="#pid">axuielement:pid() -> integer</a>
 * <a href="#setAttributeValue">axuielement:setAttributeValue(attribute, value) -> axuielementObject | nil</a>
+* <a href="#setTimeout">axuielement:setTimeout(value) -> axuielementObject</a>
 
 ##### Module Constants
 * <a href="#actions">axuielement.actions[]</a>
@@ -531,6 +532,26 @@ Returns:
 
 Notes:
  * This is still somewhat experimental and needs more testing; use with caution.
+
+- - -
+
+<a name="setTimeout"></a>
+~~~lua
+axuielement:setTimeout(value) -> axuielementObject
+~~~
+Sets the timeout value used accessibility queries performed from this element.
+
+Parameters:
+ * `value` - the number of seconds for the new timeout value.
+
+Returns:
+ * the axuielementObject
+
+Notes:
+ * To change the global timeout affecting all queries on elements which do not have a specific timeout set, use this method on the systemwide element (see [hs._asm.axuielement.systemWideElement](#systemWideElement).
+ * Changing the timeout value for an axuielement object only changes the value for that specific element -- other axuieleement objects that may refere to the identical accessibiity item are not affected.
+
+ * Setting the value to 0.0 resets the timeout -- if applied to the `systemWideElement`, the global default will be reset to its default value; if applied to another axuielement object, the timeout will be reset to the current global value as applied to the systemWideElement.
 
 ### Module Constants
 
