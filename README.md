@@ -1,8 +1,17 @@
 hs._asm.axuielement
 ===================
 
-***NOTE: Version 0.7alpha contains initial support for observers; it should be considered very experimental. Some modifications were also made to the core module to facilitate the observers, but the changes shouldn't affect the existing syntax or functionality -- if you think that it has, please revert to version 0.6.1 to verify and submit a bug report with the details.***
+*** Version 0.7.6+ is a stripped down version, removing some of the more complex search methods to see what the primary functionality required for inclusion in core and migrating some existing fatures to a more responsive model will require (e.g. `hs.application:getMenuItems`). ***
 
+* The removal of these methods is to help focus on the core requirements that can provide an immediate benefit to [Hammerspoon](https://github.com/Hammerspoon/hammerspoon) and [CommandPost](https://github.com/CommandPost/CommandPost).
+
+* This removal *is* temporary, though when they return, it may be with slightly different syntax -- the focus will be on returning the search and filter functionality while keeping Hamemrspoon/CommandPost responsive, which is currently *not* the case.
+
+* The current examples in this repository are probably broken or at least may differ in some respects -- this will be fixed once more responsive versions of the search methods can be developed
+
+* See [reference document](Reference.md) for commands currently supported -- I will endeavor to keep it as current as possible during this transition.
+
+- - -
 
 This is still very much a work in progress, and whether or not it makes it into Hammerspoon core in its current form is still undecided.  However, as there has been some interest expressed in the module, I have finally gotten around to cleaning it up some and creating a [reference document](Reference.md) for it.
 

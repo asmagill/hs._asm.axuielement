@@ -63,52 +63,6 @@ static int errorWrapper(lua_State *L, NSString *where, NSString *what, AXError e
     return 1 ;
 }
 
-
-static void getAllAXUIElements_searchHamster(CFTypeRef theRef, BOOL includeParents, CFMutableArrayRef results) {
-    CFTypeID theRefType = CFGetTypeID(theRef) ;
-    if (theRefType == CFArrayGetTypeID()) {
-        CFIndex theRefCount = CFArrayGetCount(theRef) ;
-        for (CFIndex i = 0 ; i < theRefCount ; i++) {
-            CFTypeRef value = CFArrayGetValueAtIndex(theRef, i) ;
-            CFTypeID valueType = CFGetTypeID(value) ;
-            if ((valueType == CFArrayGetTypeID()) || (valueType == AXUIElementGetTypeID())) {
-                getAllAXUIElements_searchHamster(value, includeParents, results) ;
-            }
-        }
-    } else if (theRefType == AXUIElementGetTypeID()) {
-        if (CFArrayContainsValue(results, CFRangeMake(0, CFArrayGetCount(results)), theRef)) return ;
-        CFArrayAppendValue(results, theRef) ;
-        CFArrayRef attributeNames ;
-        AXError errorState = AXUIElementCopyAttributeNames(theRef, &attributeNames) ;
-        if (errorState == kAXErrorSuccess) {
-            for (NSString *name in (__bridge NSArray *)attributeNames) {
-                if ((![name isEqualToString:(__bridge NSString *)kAXTopLevelUIElementAttribute] &&
-                    ![name isEqualToString:(__bridge NSString *)kAXParentAttribute]) || includeParents) {
-                    CFTypeRef value ;
-                    errorState = AXUIElementCopyAttributeValue(theRef, (__bridge CFStringRef)name, &value) ;
-                    if (errorState == kAXErrorSuccess) {
-                        CFTypeID theType = CFGetTypeID(value) ;
-                        if ((theType == CFArrayGetTypeID()) || (theType == AXUIElementGetTypeID())) {
-                            getAllAXUIElements_searchHamster(value, includeParents, results) ;
-                        }
-                    } else {
-                        if (errorState != kAXErrorNoValue) {
-                            [LuaSkin logVerbose:[NSString stringWithFormat:@"%s:getAllChildElements AXError %d for %@: %s", USERDATA_TAG, errorState, name, AXErrorAsString(errorState)]] ;
-                        }
-                    }
-                    if (value) CFRelease(value) ;
-                }
-            }
-        } else {
-            [LuaSkin logVerbose:[NSString stringWithFormat:@"%s:getAllChildElements AXError %d getting attribute names: %s", USERDATA_TAG, errorState, AXErrorAsString(errorState)]] ;
-        }
-        if (attributeNames) CFRelease(attributeNames) ;
-    } /* else {
-       * ignore it, not a type we care about
-    }  */
-    return ;
-}
-
 #pragma mark - Module Functions
 
 /// hs._asm.axuielement.windowElement(windowObject) -> axuielementObject
@@ -215,9 +169,6 @@ static int getApplicationElementForPID(lua_State *L) {
 ///
 /// Returns:
 ///  * a new userdata object representing a new reference to the Accessibility object.
-///
-/// Notes:
-///  * The new userdata will have no search state information attached to it, and is used internally by [hs._asm.axuielement:searchPath](#searchPath).
 static int duplicateReference(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ;
@@ -642,83 +593,6 @@ static int setAttributeValue(lua_State *L) {
         errorWrapper(L, @"setAttributeValue", attribute, errorState) ;
     }
     if (value) CFRelease(value) ;
-    return 1 ;
-}
-
-/// hs._asm.axuielement:getAllChildElements([parent], [callback]) -> table | axuielementObject
-/// Method
-/// Query the accessibility object for all child objects (and their children...) and return them in a table.
-///
-/// Paramters:
-///  * `parent`   - an optional boolean, default false, indicating that the parent of objects should be queried as well.
-///  * `callback` - an optional function callback which will receive the results of the query.  If a function is provided, the query will be performed in a background thread, and this method will return immediately.
-///
-/// Returns:
-///  * If no function callback is provided, this method will return a table containing this element, and all of the children (and optionally parents) of this element.  If a function callback is provided, this method returns the axuielementObject.
-///
-/// Notes:
-///  * The table generated, either as the return value, or as the argument to the callback function, has the `hs._asm.axuielement.elementSearchTable` metatable assigned to it. See [hs._asm.axuielement:elementSearch](#elementSearch) for details on what this provides.
-///
-///  * If `parent` is true, this method in effect provides all available accessibility objects for the application the object belongs to (or the focused application, if using the system-wide object).
-///
-///  * If you do not provide a callback function, this method blocks Hammerspoon while it performs the query; such use is not recommended, especially if you set `parent` to true, as it can block for some time.
-static int getAllAXUIElements(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
-    switch (lua_gettop(L)) {
-        case 1:  [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ; break ;
-        case 2:  [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBOOLEAN | LS_TFUNCTION, LS_TBREAK] ; break ;
-        default: [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBOOLEAN, LS_TFUNCTION, LS_TBREAK] ; break ;
-    }
-    AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
-    BOOL includeParents = NO ;
-    BOOL usesCallback   = NO ;
-    if (lua_type(L, 2) == LUA_TBOOLEAN) includeParents = (BOOL)lua_toboolean(L, 2) ;
-    if (lua_type(L, lua_gettop(L)) == LUA_TFUNCTION) usesCallback = YES ;
-
-    CFMutableArrayRef results = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks) ;
-    if (usesCallback) {
-        lua_pushvalue(L, lua_gettop(L)) ;
-        int callbackRef = [skin luaRef:refTable] ;
-        [backgroundCallbacks addObject:@(callbackRef)] ;
-        dispatch_async(dispatch_get_main_queue(), ^{
-            getAllAXUIElements_searchHamster(theRef, includeParents, results) ;
-//             dispatch_async(dispatch_get_main_queue(), ^{
-                if ([backgroundCallbacks containsObject:@(callbackRef)]) {
-                    LuaSkin *_skin = [LuaSkin sharedWithState:NULL] ;
-                    lua_State *_L = _skin.L ;
-
-                    [_skin pushLuaRef:refTable ref:callbackRef] ;
-                    CFIndex arraySize = CFArrayGetCount(results) ;
-                    lua_newtable(_L) ;
-                    for (CFIndex i = 0 ; i < arraySize ; i++) {
-                        pushAXUIElement(_L, CFArrayGetValueAtIndex(results, i)) ;
-                        lua_rawseti(_L, -2, luaL_len(_L, -2) + 1) ;
-                    }
-                    luaL_getmetatable(_L, USERDATA_TAG ".elementSearchTable") ;
-                    lua_setmetatable(_L, -2) ;
-                    CFRelease(results) ;
-                    if (![_skin protectedCallAndTraceback:1 nresults:0]) {
-                        [_skin logError:[NSString stringWithFormat:@"%s:callback error:%s", USERDATA_TAG, lua_tostring(_L, -1)]] ;
-                        lua_pop(_L, 1) ;
-                    }
-                    [_skin luaUnref:refTable ref:callbackRef] ;
-                    [backgroundCallbacks removeObject:@(callbackRef)] ;
-                }
-//             });
-        });
-        lua_pushvalue(L, 1) ;
-    } else {
-        getAllAXUIElements_searchHamster(theRef, includeParents, results) ;
-        CFIndex arraySize = CFArrayGetCount(results) ;
-        lua_newtable(L) ;
-        for (CFIndex i = 0 ; i < arraySize ; i++) {
-            pushAXUIElement(L, CFArrayGetValueAtIndex(results, i)) ;
-            lua_rawseti(L, -2, luaL_len(L, -2) + 1) ;
-        }
-        luaL_getmetatable(L, USERDATA_TAG ".elementSearchTable") ;
-        lua_setmetatable(L, -2) ;
-        CFRelease(results) ;
-    }
     return 1 ;
 }
 
@@ -1308,7 +1182,6 @@ static const luaL_Reg userdata_metaLib[] = {
     {"performAction",               performAction},
     {"elementAtPosition",           getElementAtPosition},
     {"setAttributeValue",           setAttributeValue},
-    {"getAllChildElements",         getAllAXUIElements},
     {"asHSWindow",                  axuielementToWindow},
     {"asHSApplication",             axuielementToApplication},
     {"copy",                        duplicateReference},

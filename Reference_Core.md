@@ -50,11 +50,8 @@ axuielement = require("hs._asm.axuielement")
 * <a href="#copy">axuielement:copy() -> axuielementObject</a>
 * <a href="#dynamicMethods">axuielement:dynamicMethods([keyValueTable]) -> table</a>
 * <a href="#elementAtPosition">axuielement:elementAtPosition(x, y | { x, y }) -> axuielementObject</a>
-* <a href="#elementSearch">axuielement:elementSearch(matchCriteria, [isPattern], [includeParents]) -> table</a>
-* <a href="#getAllChildElements">axuielement:getAllChildElements([parent], [callback]) -> table | axuielementObject</a>
 * <a href="#isAttributeSettable">axuielement:isAttributeSettable(attribute) -> boolean</a>
 * <a href="#isValid">axuielement:isValid() -> boolean</a>
-* <a href="#matches">axuielement:matches(matchCriteria, [isPattern]) -> boolean</a>
 * <a href="#parameterizedAttributeNames">axuielement:parameterizedAttributeNames() -> table</a>
 * <a href="#parameterizedAttributeValue">axuielement:parameterizedAttributeValue(attribute, parameter) -> value</a>
 * <a href="#path">axuielement:path() -> table</a>
@@ -290,9 +287,6 @@ Parameters:
 Returns:
  * a new userdata object representing a new reference to the Accessibility object.
 
-Notes:
- * The new userdata will have no search state information attached to it, and is used internally by [hs._asm.axuielement:searchPath](#searchPath).
-
 - - -
 
 <a name="dynamicMethods"></a>
@@ -334,71 +328,6 @@ Notes:
 
 - - -
 
-<a name="elementSearch"></a>
-~~~lua
-axuielement:elementSearch(matchCriteria, [isPattern], [includeParents]) -> table
-~~~
-Returns a table of axuielementObjects that match the specified criteria.  If this method is called for an axuielementObject, it will include all children of the element in its search.  If this method is called for a table of axuielementObjects, it will return the subset of the table that match the criteria.
-
-Parameters:
- * `matchCriteria`  - the criteria to compare against the accessibility objects
- * `isPattern`      - an optional boolean, default false, specifying whether or not the strings in the search criteria should be considered as Lua patterns (true) or as absolute string matches (false).
- * `includeParents` - an optional boolean, default false, indicating that the parent of objects should be queried as well.  If you wish to specify this parameter, you *must* also specify the `isPattern` parameter.  This parameter is ignored if the method is called on a result set from a previous invocation of this method or [hs._asm.axuielement:getAllChildElements](#getAllChildElements).
-
-Returns:
- * a table of axuielementObjects which match the specified criteria.  The table returned will include a metatable which allows calling this method on the result table for further narrowing the search.
-
-Notes:
- * this method makes heavy use of the [hs._asm.axuielement:matches](#matches) method and pre-creates the necessary dynamic functions to optimize its search.
-
- * You can use this method to retrieve all of the current axuielementObjects for an application as follows:
-~~~
-ax = require"hs._asm.axuielement"
-elements = ax.applicationElement(hs.application("Safari")):elementSearch({})
-~~~
- * Note that if you started from the window of an application, only the children of that window would be returned; you could force it to gather all of the objects for the application by using `:elementSearch({}, false, true)`.
- * However, this method of querying for all elements can be slow -- it is highly recommended that you use [hs._asm.axuielement:getAllChildElements](#getAllChildElements) instead, and ideally with a callback function.
-~~~
-ax = require"hs._asm.axuielement"
-ax.applicationElement(hs.application("Safari")):getAllChildElements(function(t)
-    elements = t
-    print("done with query")
-end)
-~~~
- * Whatever option you choose, you can use this method to narrow down the result set. This example will print the frame for each button that was present in Safari when the search occurred which has a description which starts with "min" (e.g. "minimize button") or "full" (e.g. "full screen button"):
-~~~
-for i, v in ipairs(elements:elementSearch({
-                                    role="AXButton",
-                                    roleDescription = { "^min", "^full"}
-                                }, true)) do
-    print(hs.inspect(v:frame()))
-end
-~~~
-
-- - -
-
-<a name="getAllChildElements"></a>
-~~~lua
-axuielement:getAllChildElements([parent], [callback]) -> table | axuielementObject
-~~~
-Query the accessibility object for all child objects (and their children...) and return them in a table.
-
-Paramters:
- * `parent`   - an optional boolean, default false, indicating that the parent of objects should be queried as well.
- * `callback` - an optional function callback which will receive the results of the query.  If a function is provided, the query will be performed in a background thread, and this method will return immediately.
-
-Returns:
- * If no function callback is provided, this method will return a table containing this element, and all of the children (and optionally parents) of this element.  If a function callback is provided, this method returns the axuielementObject.
-
-Notes:
- * The table generated, either as the return value, or as the argument to the callback function, has the `hs._asm.axuielement.elementSearchTable` metatable assigned to it. See [hs._asm.axuielement:elementSearch](#elementSearch) for details on what this provides.
-
- * If `parent` is true, this method in effect provides all available accessibility objects for the application the object belongs to (or the focused application, if using the system-wide object).
-
- * If you do not provide a callback function, this method blocks Hammerspoon while it performs the query; such use is not recommended, especially if you set `parent` to true, as it can block for some time.
-
-- - -
-
 <a name="isAttributeSettable"></a>
 ~~~lua
 axuielement:isAttributeSettable(attribute) -> boolean
@@ -424,34 +353,6 @@ Parameters:
 
 Returns:
  * a boolean value indicating whether or not the accessibility object is still valid.
-
-- - -
-
-<a name="matches"></a>
-~~~lua
-axuielement:matches(matchCriteria, [isPattern]) -> boolean
-~~~
-Returns true if the axuielementObject matches the specified criteria or false if it does not.
-
-Paramters:
- * `matchCriteria` - the criteria to compare against the accessibility object
- * `isPattern`     - an optional boolean, default false, specifying whether or not the strings in the search criteria should be considered as Lua patterns (true) or as absolute string matches (false).
-
-Returns:
- * true if the axuielementObject matches the criteria, false if it does not.
-
-Notes:
- * if `isPattern` is specified and is true, all string comparisons are done with `string.match`.  See the Lua manual, section 6.4.1 (`help.lua._man._6_4_1` in the Hammerspoon console).
- * the `matchCriteria` must be one of the following:
-   * a single string, specifying the AXRole value the axuielementObject's AXRole attribute must equal for the match to return true
-   * an array of strings, specifying a list of AXRoles for which the match should return true
-   * a table of key-value pairs specifying a more complex match criteria.  This table will be evaluated as follows:
-     * each key-value pair is treated as a separate test and the object *must* match as true for all tests
-     * each key is a string specifying an attribute to evaluate.  This attribute may be specified with its formal name (e.g. "AXRole") or the informal version (e.g. "role" or "Role").
-     * each value may be a string, a number, a boolean, or an axuielementObject userdata object, or an array (table) of such.  If the value is an array, then the test will match as true if the object matches any of the supplied values for the attribute specified by the key.
-       * Put another way: key-value pairs are "and'ed" together while the values for a specific key-value pair are "or'ed" together.
-
- * This method is used by [hs._asm.axuielement:elementSearch](#elementSearch) to determine if the given object should be included it's result set.  As an optimization for the `elementSearch` method, the keys in the `matchCriteria` table may be provided as a function which takes one argument (the axuielementObject to query).  The return value of this function will be compared against the value(s) of the key-value pair as described above.  This is done to prevent dynamically re-creating the query for each comparison when the search set is large.
 
 - - -
 
