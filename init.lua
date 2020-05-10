@@ -1,8 +1,3 @@
--- maybe save some pain, if the shim is installed; otherwise, expect an objc dump to console when this loads on stock Hammerspoon without pull #2308 applied
-if package.searchpath("hs._asm.coroutineshim", package.path) then
-    require"hs._asm.coroutineshim"
-end
-
 --- === hs._asm.axuielement ===
 ---
 --- This module allows you to access the accessibility objects of running applications, their windows, menus, and other user interface elements that support the OS X accessibility API.
@@ -28,6 +23,12 @@ end
 --- Limited support for parameterized attributes is provided, but is not yet complete.  This is expected to see updates in the future.
 
 local USERDATA_TAG = "hs._asm.axuielement"
+
+if not hs.accessibilityState(true) then
+    hs.luaSkinLog.ef("%s - module requires accessibility to be enabled; fix in SystemPreferences -> Privacy & Security and restart Hammerspoon", USERDATA_TAG)
+    return nil
+end
+
 local module       = require(USERDATA_TAG..".internal")
 
 local basePath = package.searchpath(USERDATA_TAG, package.path)
@@ -429,6 +430,20 @@ objectMT.elementSearch = function(self, searchParameters, isPattern, includePare
     return setmetatable(results, hs.getObjectMetatable(USERDATA_TAG .. ".elementSearchTable"))
 end
 
+--- hs._asm.axuielement:path() -> table
+--- Method
+--- Returns a table of axuielements tracing this object through its parent objects to the root for this element, most likely an application object or the system wide object.
+---
+--- Parameters:
+---  * None
+---
+--- Returns:
+---  * a table containing this object and 0 or more parent objects representing the path from the root object to this element.
+---
+--- Notes:
+---  * this object will always exist as the last element in the table (e.g. at `table[#table]`) with its most imemdiate parent at `#table - 1`, etc. until the rootmost object for this element is reached at index position 1.
+---
+---  * an axuielement object representing an application or the system wide object is its own rootmost object and will return a table containing only itself (i.e. `#table` will equal 1)
 objectMT.path = function(self)
     local results, current = { self }, self
     while current:attributeValue("AXParent") do

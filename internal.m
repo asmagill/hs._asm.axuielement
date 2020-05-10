@@ -363,10 +363,7 @@ static int getAllAttributeValues(lua_State *L) {
     AXError errorState = AXUIElementCopyAttributeNames(theRef, &attributeNames) ;
     if (errorState == kAXErrorSuccess) {
         CFArrayRef values = nil ;
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wassign-enum"
         errorState = AXUIElementCopyMultipleAttributeValues(theRef, attributeNames, 0, &values) ;
-#pragma clang diagnostic pop
         if (errorState == kAXErrorSuccess) {
             lua_newtable(L) ;
             for(CFIndex idx = 0 ; idx < CFArrayGetCount(attributeNames) ; idx++) {

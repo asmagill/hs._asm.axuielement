@@ -57,6 +57,7 @@ axuielement = require("hs._asm.axuielement")
 * <a href="#matches">axuielement:matches(matchCriteria, [isPattern]) -> boolean</a>
 * <a href="#parameterizedAttributeNames">axuielement:parameterizedAttributeNames() -> table</a>
 * <a href="#parameterizedAttributeValue">axuielement:parameterizedAttributeValue(attribute, parameter) -> value</a>
+* <a href="#path">axuielement:path() -> table</a>
 * <a href="#performAction">axuielement:performAction(action) -> axuielement | false | nil</a>
 * <a href="#pid">axuielement:pid() -> integer</a>
 * <a href="#setAttributeValue">axuielement:setAttributeValue(attribute, value) -> axuielementObject | nil</a>
@@ -483,6 +484,25 @@ Returns:
 
 Notes:
  * Parameterized attribute support is still considered experimental and not fully supported yet.  Use with caution.
+
+- - -
+
+<a name="path"></a>
+~~~lua
+axuielement:path() -> table
+~~~
+Returns a table of axuielements tracing this object through its parent objects to the root for this element, most likely an application object or the system wide object.
+
+Parameters:
+ * None
+
+Returns:
+ * a table containing this object and 0 or more parent objects representing the path from the root object to this element.
+
+Notes:
+ * this object will always exist as the last element in the table (e.g. at `table[#table]`) with its most imemdiate parent at `#table - 1`, etc. until the rootmost object for this element is reached at index position 1.
+
+ * an axuielement object representing an application or the system wide object is its own rootmost object and will return a table containing only itself (i.e. `#table` will equal 1)
 
 - - -
 
