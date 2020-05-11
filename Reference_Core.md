@@ -47,6 +47,7 @@ axuielement = require("hs._asm.axuielement")
 * <a href="#attributeNames">axuielement:attributeNames() -> table</a>
 * <a href="#attributeValue">axuielement:attributeValue(attribute) -> value</a>
 * <a href="#attributeValueCount">axuielement:attributeValueCount(attribute) -> integer</a>
+* <a href="#buildTree">axuielement:buildTree(callback, [depth], [withParents]) -> buildTreeObject</a>
 * <a href="#copy">axuielement:copy() -> axuielementObject</a>
 * <a href="#dynamicMethods">axuielement:dynamicMethods([keyValueTable]) -> table</a>
 * <a href="#elementAtPosition">axuielement:elementAtPosition(x, y | { x, y }) -> axuielementObject</a>
@@ -272,6 +273,29 @@ Parameters:
 
 Returns:
  * the number of items in the value for the attribute, if it is an array, or nil if the value is not an array.
+
+- - -
+
+<a name="buildTree"></a>
+~~~lua
+axuielement:buildTree(callback, [depth], [withParents]) -> buildTreeObject
+~~~
+Captures all of the available information for the accessibility object and its children and returns it in a table for inspection.
+
+Parameters:
+ * `callback` - a required function which should expect two arguments: a `msg` string specifying how the search ended, and a table contiaining the recorded information. `msg` will be "completed" when the search has completed normally (or reached the specified depth) and will contain a string starting with "**" if it terminates early for some reason (see Returns: section)
+ * `depth`    - an optional integer, default `math.huge`, specifying the maximum depth from the intial accessibility object that should be visited to identify child elements and their attributes.
+ * `withParents` - an optional boolean, default false, specifying whether or not an element's (or child's) attributes for `AXParent` and `AXTopLevelUIElement` should also be visited when identifying additional elements to include in the results table.
+
+Returns:
+ * a `buildTreeObject` which contains metamethods allowing you to check to see if the build process has completed and cancel it early if desired:
+   * `buildTreeObject:isRunning()` - will return true if the traversal is still ongoing, or false if it has completed or been cancelled
+   * `buildTreeObject:cancel()`    - will cancel the currently running search and invoke the callback with the partial results already collected. The `msg` parameter for the calback will be "** cancelled".
+
+Notes:
+ * this method utilizes coroutines to keep Hammerspoon responsive, but can be slow to complete if you do not specifiy a depth or start from an element that has a lot of children or has children with many elements (e.g. the application element for a web browser).
+
+ * The results of this method are not generally intended to be used in production programs; it is organized more for exploratory purposes when trying to understand how elements are related within a given application or to determine what elements might be worth targetting with more specific queries.
 
 - - -
 
@@ -558,7 +582,7 @@ Notes:
 
 >     The MIT License (MIT)
 >
-> Copyright (c) 2018 Aaron Magill
+> Copyright (c) 2020 Aaron Magill
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 >

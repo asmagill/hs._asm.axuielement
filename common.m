@@ -30,7 +30,10 @@ BOOL new_application(lua_State* L, pid_t pid) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     Class HSA = NSClassFromString(@"HSapplication") ;
     if (HSA) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wobjc-messaging-id"
         NSObject *obj = [[HSA alloc] initWithPid:pid withState:L] ;
+#pragma clang diagnostic pop
         if (obj) {
             [skin pushNSObject:obj] ;
             isGood = true ;
@@ -49,7 +52,10 @@ BOOL new_window(lua_State* L, AXUIElementRef win) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     Class HSW = NSClassFromString(@"HSwindow") ;
     if (HSW) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wobjc-messaging-id"
         NSObject *obj = [[HSW alloc] initWithAXUIElementRef:win] ;
+#pragma clang diagnostic pop
         if (obj) {
             // the HSapplication initializer retains its elementRef; the HSwindow one doesn't
             CFRetain(win) ;

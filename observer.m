@@ -125,7 +125,7 @@ static void observerCallback(AXObserverRef observer, AXUIElementRef element, CFS
 /// Notes:
 ///  * If you already have the `hs.application` object for an application, you can get its process ID with `hs.application:pid()`
 ///  * If you already have an `hs._asm.axuielement` from the application you wish to observe (it doesn't have to be the application axuielement object, just one belonging to the application), you can get the process ID with `hs._asm.axuielement:pid()`.
-static int observer_new(lua_State *L) {
+static int axobserver_new(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TNUMBER | LS_TINTEGER, LS_TBREAK] ;
     pid_t         appPid   = (pid_t)lua_tointeger(L, 1) ;
@@ -155,7 +155,7 @@ static int observer_new(lua_State *L) {
 ///
 /// Notes:
 ///  * This method does nothing if the observer is already running
-static int observer_start(lua_State *L) {
+static int axobserver_start(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK] ;
     AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
@@ -182,7 +182,7 @@ static int observer_start(lua_State *L) {
 ///
 /// Notes:
 ///  * This method does nothing if the observer is not currently running
-static int observer_stop(lua_State *L) {
+static int axobserver_stop(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK] ;
     AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
@@ -206,7 +206,7 @@ static int observer_stop(lua_State *L) {
 ///
 /// Returns:
 ///  * a boolean value indicating whether or not the observer is currently active.
-static int observer_isRunning(lua_State *L) {
+static int axobserver_isRunning(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK] ;
     AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
@@ -232,7 +232,7 @@ static int observer_isRunning(lua_State *L) {
 ///    * the `hs._asm.axuielement` object for the accessibility element which generated the notification
 ///    * a string specifying the specific notification which was received
 ///    * a table containing key-value pairs with more information about the notification, if the element and notification type provide it. Commonly this will be an empty table indicating that no additional detail was provided.
-static int observer_callback(lua_State *L) {
+static int axobserver_callback(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TFUNCTION | LS_TNIL | LS_TOPTIONAL, LS_TBREAK] ;
     AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
@@ -273,7 +273,7 @@ static int observer_callback(lua_State *L) {
 ///  * multiple notifications for the same accessibility element can be registered by invoking this method multiple times with the same element but different notification strings.
 ///  * if the specified element and notification string are already registered, this method does nothing.
 ///  * the notification string is application dependent and can be any string that the application developers choose; some common ones are found in `hs._asm.axuielement.observer.notifications`, but the list is not exhaustive nor is an application or element required to provide them.
-static int observer_addWatchedElement(lua_State *L) {
+static int axobserver_addWatchedElement(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG,
                     LS_TUSERDATA, USERDATA_TAG,
@@ -316,7 +316,7 @@ static int observer_addWatchedElement(lua_State *L) {
 ///
 /// Notes:
 ///  * if the specified element and notification string are not currently registered with the observer, this method does nothing.
-static int observer_removeWatchedElement(lua_State *L) {
+static int axobserver_removeWatchedElement(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG,
                     LS_TUSERDATA, USERDATA_TAG,
@@ -336,9 +336,7 @@ static int observer_removeWatchedElement(lua_State *L) {
     }
     if (exists > -1) {
         AXError err = AXObserverRemoveNotification(observer, element, (__bridge CFStringRef)what) ;
-        if (err == kAXErrorSuccess || err == kAXErrorNotificationNotRegistered || err == kAXErrorNotificationUnsupported || err == kAXErrorInvalidUIElementObserver) {
-            CFArrayRemoveValueAtIndex(notifications, exists) ;
-        }
+        CFArrayRemoveValueAtIndex(notifications, exists) ;
         if (err != kAXErrorSuccess) return luaL_error(L, AXErrorAsString(err)) ;
     }
     lua_pushvalue(L, 1) ;
@@ -358,7 +356,7 @@ static int observer_removeWatchedElement(lua_State *L) {
 /// Notes:
 ///  * If an element is specified, then the table returned will contain a list of strings specifying the specific notifications that the observer is watching that element for.
 ///  * If no argument is specified, then the table will contain key-value pairs in which each key will be an `hs._asm.axuielement` that is being observed and the corresponding value will be a table containing a list of strings specifying the specific notifications that the observer is watching for from from that element.
-static int observer_watchedElements(lua_State *L) {
+static int axobserver_watchedElements(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK | LS_TVARARG] ;
     AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
@@ -384,7 +382,7 @@ static int observer_watchedElements(lua_State *L) {
 }
 
 #ifdef DEBUGGING_METHODS
-static int observer_internalDetails(lua_State *L) {
+static int axobserver_internalDetails(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     CFMutableDictionaryRef details = observerDetails ;
     if (lua_gettop(L) > 0) {
@@ -515,16 +513,16 @@ static int meta_gc(lua_State* __unused L) {
 
 // Metatable for userdata objects
 static const luaL_Reg userdata_metaLib[] = {
-    {"start",         observer_start},
-    {"stop",          observer_stop},
-    {"isRunning",     observer_isRunning},
-    {"callback",      observer_callback},
-    {"addWatcher",    observer_addWatchedElement},
-    {"removeWatcher", observer_removeWatchedElement},
-    {"watching",      observer_watchedElements},
+    {"start",         axobserver_start},
+    {"stop",          axobserver_stop},
+    {"isRunning",     axobserver_isRunning},
+    {"callback",      axobserver_callback},
+    {"addWatcher",    axobserver_addWatchedElement},
+    {"removeWatcher", axobserver_removeWatchedElement},
+    {"watching",      axobserver_watchedElements},
 
 #ifdef DEBUGGING_METHODS
-    {"_internals",    observer_internalDetails},
+    {"_internals",    axobserver_internalDetails},
 #endif
 
     {"__tostring",    userdata_tostring},
@@ -535,9 +533,9 @@ static const luaL_Reg userdata_metaLib[] = {
 
 // Functions for returned object when module loads
 static luaL_Reg moduleLib[] = {
-    {"new",        observer_new},
+    {"new",        axobserver_new},
 #ifdef DEBUGGING_METHODS
-    {"_internals", observer_internalDetails},
+    {"_internals", axobserver_internalDetails},
 #endif
     {NULL,         NULL}
 } ;

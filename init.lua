@@ -254,6 +254,109 @@ objectMT.path = function(self)
     return results
 end
 
+
+local buildTreeHamster
+buildTreeHamster = function(self, prams, depth, withParents, seen)
+    if prams.cancel then return prams.msg end
+    coroutine.applicationYield()
+
+    if depth == 0 then return "** max depth exceeded" end
+    seen  = seen or {}
+    if getmetatable(self) == objectMT then
+        local seenBefore = fnutils.find(seen, function(_) return _._element == self end)
+        if seenBefore then return seenBefore end
+        local thisObject = self:allAttributeValues() or {}
+        thisObject._element = self
+        thisObject._actions = self:actionNames()
+        thisObject._attributes = self:attributeNames()
+        thisObject._parameterizedAttributes = self:parameterizedAttributeNames()
+
+        seen[self] = thisObject
+        for k, v in pairs(thisObject) do
+            if k ~= "_element" then
+                if (type(v) == "table" and #v > 0) then
+                    thisObject[k] = buildTreeHamster(v, prams, depth, withParents, seen)
+                elseif getmetatable(v) == objectMT then
+                    if not withParents and fnutils.contains(parentLabels, k) then
+                    -- not diving into parents, but lets see if we've seen them already...
+                        thisObject[k] = fnutils.find(seen, function(_) return _._element == v end) or v
+                    else
+                        thisObject[k] = buildTreeHamster(v, prams, depth - 1, withParents, seen)
+                    end
+                end
+            end
+        end
+        return thisObject
+    elseif type(self) == "table" then
+        local results = {}
+        for i,v in ipairs(self) do
+            if (type(v) == "table" and #v > 0) or getmetatable(v) == objectMT then
+                results[i] = buildTreeHamster(v, prams, depth - 1, withParents, seen)
+            else
+                results[i] = v
+            end
+        end
+        return results
+    end
+    return self
+end
+
+--- hs._asm.axuielement:buildTree(callback, [depth], [withParents]) -> buildTreeObject
+--- Method
+--- Captures all of the available information for the accessibility object and its children and returns it in a table for inspection.
+---
+--- Parameters:
+---  * `callback` - a required function which should expect two arguments: a `msg` string specifying how the search ended, and a table contiaining the recorded information. `msg` will be "completed" when the search has completed normally (or reached the specified depth) and will contain a string starting with "**" if it terminates early for some reason (see Returns: section)
+---  * `depth`    - an optional integer, default `math.huge`, specifying the maximum depth from the intial accessibility object that should be visited to identify child elements and their attributes.
+---  * `withParents` - an optional boolean, default false, specifying whether or not an element's (or child's) attributes for `AXParent` and `AXTopLevelUIElement` should also be visited when identifying additional elements to include in the results table.
+---
+--- Returns:
+---  * a `buildTreeObject` which contains metamethods allowing you to check to see if the build process has completed and cancel it early if desired:
+---    * `buildTreeObject:isRunning()` - will return true if the traversal is still ongoing, or false if it has completed or been cancelled
+---    * `buildTreeObject:cancel()`    - will cancel the currently running search and invoke the callback with the partial results already collected. The `msg` parameter for the calback will be "** cancelled".
+---
+--- Notes:
+---  * this method utilizes coroutines to keep Hammerspoon responsive, but can be slow to complete if you do not specifiy a depth or start from an element that has a lot of children or has children with many elements (e.g. the application element for a web browser).
+---
+---  * The results of this method are not generally intended to be used in production programs; it is organized more for exploratory purposes when trying to understand how elements are related within a given application or to determine what elements might be worth targetting with more specific queries.
+objectMT.buildTree = function(self, callback, depth, withParents)
+    assert(
+        type(callback) == "function" or (getmetatable(callback) or {}).__call,
+        "buildTree requires a callback function; element:buildTree(callback, [depth], [withParents])"
+    )
+    if type(depth) == "boolean" and type(withParents) == "nil" then
+        depth, withParents = nil, depth
+    end
+    depth = depth or math.huge
+
+    local prams = {
+        cancel = false,
+        callback = callback, -- may add partial updates at some point
+    }
+    coroutine.wrap(function()
+        local results = buildTreeHamster(self, prams, depth, withParents)
+        callback(prams.msg or "completed", results)
+    end)()
+
+    return setmetatable({}, {
+        __index = {
+            cancel = function(_, msg)
+                prams.cancel = true
+                prams.msg = msg or "** cancelled"
+            end,
+            isRunning = function(_)
+                return not prams.msg
+            end,
+        },
+        __tostring = function(_)
+            return USERDATA_TAG .. ":buildTree " .. tostring(self):match(USERDATA_TAG .. ": (.+)$")
+        end,
+--         __gc = function(_)
+--             _:cancel("** gc on buildTree object")
+--         end,
+    })
+end
+
 -- Return Module Object --------------------------------------------------
 
 if module.types then module.types = ls.makeConstantsTable(module.types) end
