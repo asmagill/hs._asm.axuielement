@@ -63,7 +63,7 @@ static int errorWrapper(lua_State *L, NSString *where, NSString *what, AXError e
 
 #pragma mark - Module Functions
 
-/// hs._asm.axuielement.windowElement(windowObject) -> axuielementObject
+/// hs.axuielement.windowElement(windowObject) -> axuielementObject
 /// Constructor
 /// Returns the accessibility object for the window specified by the `hs.window` object.
 ///
@@ -88,7 +88,7 @@ static int axuielement_getWindowElement(lua_State *L)      {
     return 1 ;
 }
 
-/// hs._asm.axuielement.applicationElement(applicationObject) -> axuielementObject
+/// hs.axuielement.applicationElement(applicationObject) -> axuielementObject
 /// Constructor
 /// Returns the top-level accessibility object for the application specified by the `hs.application` object.
 ///
@@ -113,7 +113,7 @@ static int axuielement_getApplicationElement(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement.systemWideElement() -> axuielementObject
+/// hs.axuielement.systemWideElement() -> axuielementObject
 /// Constructor
 /// Returns an accessibility object that provides access to system attributes.
 ///
@@ -131,7 +131,7 @@ static int axuielement_getSystemWideElement(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement.applicationElementForPID(pid) -> axuielementObject
+/// hs.axuielement.applicationElementForPID(pid) -> axuielementObject
 /// Constructor
 /// Returns the top-level accessibility object for the application with the specified process ID.
 ///
@@ -158,7 +158,7 @@ static int axuielement_getApplicationElementForPID(lua_State *L) {
 
 #pragma mark - Module Methods
 
-/// hs._asm.axuielement:copy() -> axuielementObject
+/// hs.axuielement:copy() -> axuielementObject
 /// Method
 /// Return a duplicate userdata reference to the Accessibility object.
 ///
@@ -175,7 +175,7 @@ static int axuielement_duplicateReference(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:attributeNames() -> table
+/// hs.axuielement:attributeNames() -> table
 /// Method
 /// Returns a list of all the attributes supported by the specified accessibility object.
 ///
@@ -186,7 +186,7 @@ static int axuielement_duplicateReference(lua_State *L) {
 ///  * an array of the names of all attributes supported by the axuielementObject
 ///
 /// Notes:
-///  * Common attribute names can be found in the [hs._asm.axuielement.attributes](#attributes) tables; however, this method will list only those names which are supported by this object, and is not limited to just those in the referenced table.
+///  * Common attribute names can be found in the [hs.axuielement.attributes](#attributes) tables; however, this method will list only those names which are supported by this object, and is not limited to just those in the referenced table.
 static int axuielement_getAttributeNames(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ;
@@ -206,7 +206,7 @@ static int axuielement_getAttributeNames(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:actionNames() -> table
+/// hs.axuielement:actionNames() -> table
 /// Method
 /// Returns a list of all the actions the specified accessibility object can perform.
 ///
@@ -217,7 +217,7 @@ static int axuielement_getAttributeNames(lua_State *L) {
 ///  * an array of the names of all actions supported by the axuielementObject
 ///
 /// Notes:
-///  * Common action names can be found in the [hs._asm.axuielement.actions](#actions) table; however, this method will list only those names which are supported by this object, and is not limited to just those in the referenced table.
+///  * Common action names can be found in the [hs.axuielement.actions](#actions) table; however, this method will list only those names which are supported by this object, and is not limited to just those in the referenced table.
 static int axuielement_getActionNames(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ;
@@ -237,12 +237,12 @@ static int axuielement_getActionNames(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:actionDescription(action) -> string
+/// hs.axuielement:actionDescription(action) -> string
 /// Method
 /// Returns a localized description of the specified accessibility object's action.
 ///
 /// Parameters:
-///  * `action` - the name of the action, as specified by [hs._asm.axuielement:actionNames](#actionNames).
+///  * `action` - the name of the action, as specified by [hs.axuielement:actionNames](#actionNames).
 ///
 /// Returns:
 ///  * a string containing a description of the object's action
@@ -267,12 +267,12 @@ static int axuielement_getActionDescription(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:attributeValue(attribute) -> value
+/// hs.axuielement:attributeValue(attribute) -> value
 /// Method
 /// Returns the value of an accessibility object's attribute.
 ///
 /// Parameters:
-///  * `attribute` - the name of the attribute, as specified by [hs._asm.axuielement:attributeNames](#attributeNames).
+///  * `attribute` - the name of the attribute, as specified by [hs.axuielement:attributeNames](#attributeNames).
 ///
 /// Returns:
 ///  * the current value of the attribute, or nil if the attribute has no value
@@ -294,7 +294,7 @@ static int axuielement_getAttributeValue(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:allAttributeValues([includeErrors]) -> table
+/// hs.axuielement:allAttributeValues([includeErrors]) -> table
 /// Method
 /// Returns a table containing key-value pairs for all attributes of the accessibility object.
 ///
@@ -334,12 +334,12 @@ static int axuielement_getAllAttributeValues(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:attributeValueCount(attribute) -> integer
+/// hs.axuielement:attributeValueCount(attribute) -> integer
 /// Method
 /// Returns the count of the array of an accessibility object's attribute value.
 ///
 /// Parameters:
-///  * `attribute` - the name of the attribute, as specified by [hs._asm.axuielement:attributeNames](#attributeNames).
+///  * `attribute` - the name of the attribute, as specified by [hs.axuielement:attributeNames](#attributeNames).
 ///
 /// Returns:
 ///  * the number of items in the value for the attribute, if it is an array, or nil if the value is not an array.
@@ -358,7 +358,7 @@ static int axuielement_getAttributeValueCount(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:parameterizedAttributeNames() -> table
+/// hs.axuielement:parameterizedAttributeNames() -> table
 /// Method
 /// Returns a list of all the parameterized attributes supported by the specified accessibility object.
 ///
@@ -386,12 +386,12 @@ static int axuielement_getParameterizedAttributeNames(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:isAttributeSettable(attribute) -> boolean
+/// hs.axuielement:isAttributeSettable(attribute) -> boolean
 /// Method
 /// Returns whether the specified accessibility object's attribute can be modified.
 ///
 /// Parameters:
-///  * `attribute` - the name of the attribute, as specified by [hs._asm.axuielement:attributeNames](#attributeNames).
+///  * `attribute` - the name of the attribute, as specified by [hs.axuielement:attributeNames](#attributeNames).
 ///
 /// Returns:
 ///  * a boolean value indicating whether or not the value of the parameter can be modified.
@@ -410,7 +410,7 @@ static int axuielement_isAttributeSettable(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:isValid() -> boolean
+/// hs.axuielement:isValid() -> boolean
 /// Method
 /// Returns whether the specified accessibility object is still valid.
 ///
@@ -434,7 +434,7 @@ static int axuielement_isValid(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:pid() -> integer
+/// hs.axuielement:pid() -> integer
 /// Method
 /// Returns the process ID associated with the specified accessibility object.
 ///
@@ -457,12 +457,12 @@ static int axuielement_getPid(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:performAction(action) -> axuielement | false | nil
+/// hs.axuielement:performAction(action) -> axuielement | false | nil
 /// Method
 /// Requests that the specified accessibility object perform the specified action.
 ///
 /// Parameters:
-///  * `action` - the name of the action, as specified by [hs._asm.axuielement:actionNames](#actionNames).
+///  * `action` - the name of the action, as specified by [hs.axuielement:actionNames](#actionNames).
 ///
 /// Returns:
 ///  * if the requested action was accepted by the target, returns the axuielementObject; if the requested action was rejected, returns false, otherwise returns nil on error.
@@ -485,7 +485,7 @@ static int axuielement_performAction(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:elementAtPosition(x, y | { x, y }) -> axuielementObject
+/// hs.axuielement:elementAtPosition(x, y | { x, y }) -> axuielementObject
 /// Method
 /// Returns the accessibility object at the specified position in top-left relative screen coordinates.
 ///
@@ -497,11 +497,11 @@ static int axuielement_performAction(lua_State *L) {
 ///  * an axuielementObject for the object at the specified coordinates, or nil if no object could be identified.
 ///
 /// Notes:
-///  * This method can only be called on an axuielementObject that represents an application or the system-wide element (see [hs._asm.axuielement.systemWideElement](#systemWideElement)).
+///  * This method can only be called on an axuielementObject that represents an application or the system-wide element (see [hs.axuielement.systemWideElement](#systemWideElement)).
 ///
 ///  * This function does hit-testing based on window z-order (that is, layering). If one window is on top of another window, the returned accessibility object comes from whichever window is topmost at the specified location.
 ///  * If this method is called on an axuielementObject representing an application, the search is restricted to the application.
-///  * If this method is called on an axuielementObject representing the system-wide element, the search is not restricted to any particular application.  See [hs._asm.axuielement.systemElementAtPosition](#systemElementAtPosition).
+///  * If this method is called on an axuielementObject representing the system-wide element, the search is not restricted to any particular application.  See [hs.axuielement.systemElementAtPosition](#systemElementAtPosition).
 static int axuielement_getElementAtPosition(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TNUMBER | LS_TTABLE, LS_TNUMBER | LS_TOPTIONAL, LS_TBREAK] ;
@@ -532,12 +532,12 @@ static int axuielement_getElementAtPosition(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:parameterizedAttributeValue(attribute, parameter) -> value
+/// hs.axuielement:parameterizedAttributeValue(attribute, parameter) -> value
 /// Method
 /// Returns the value of an accessibility object's parameterized attribute.
 ///
 /// Parameters:
-///  * `attribute` - the name of the attribute, as specified by [hs._asm.axuielement:parameterizedAttributeNames](#parameterizedAttributeNames).
+///  * `attribute` - the name of the attribute, as specified by [hs.axuielement:parameterizedAttributeNames](#parameterizedAttributeNames).
 ///  * `parameter` - the parameter
 ///
 /// Returns:
@@ -565,12 +565,12 @@ static int axuielement_getParameterizedAttributeValue(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:setAttributeValue(attribute, value) -> axuielementObject | nil
+/// hs.axuielement:setAttributeValue(attribute, value) -> axuielementObject | nil
 /// Method
 /// Sets the accessibility object's attribute to the specified value.
 ///
 /// Parameters:
-///  * `attribute` - the name of the attribute, as specified by [hs._asm.axuielement:attributeNames](#attributeNames).
+///  * `attribute` - the name of the attribute, as specified by [hs.axuielement:attributeNames](#attributeNames).
 ///  * `value`     - the value to assign to the attribute
 ///
 /// Returns:
@@ -594,7 +594,7 @@ static int axuielement_setAttributeValue(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:asHSApplication() -> hs.application object | nil
+/// hs.axuielement:asHSApplication() -> hs.application object | nil
 /// Method
 /// If the element referes to an application, return an `hs.application` object for the element.
 ///
@@ -629,7 +629,7 @@ static int axuielement_toHSApplication(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:asHSWindow() -> hs.window object | nil
+/// hs.axuielement:asHSWindow() -> hs.window object | nil
 /// Method
 /// If the element referes to a window, return an `hs.window` object for the element.
 ///
@@ -659,7 +659,7 @@ static int axuielement_toHSWindow(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement:setTimeout(value) -> axuielementObject
+/// hs.axuielement:setTimeout(value) -> axuielementObject
 /// Method
 /// Sets the timeout value used accessibility queries performed from this element.
 ///
@@ -670,7 +670,7 @@ static int axuielement_toHSWindow(lua_State *L) {
 ///  * the axuielementObject
 ///
 /// Notes:
-///  * To change the global timeout affecting all queries on elements which do not have a specific timeout set, use this method on the systemwide element (see [hs._asm.axuielement.systemWideElement](#systemWideElement).
+///  * To change the global timeout affecting all queries on elements which do not have a specific timeout set, use this method on the systemwide element (see [hs.axuielement.systemWideElement](#systemWideElement).
 ///  * Changing the timeout value for an axuielement object only changes the value for that specific element -- other axuieleement objects that may refere to the identical accessibiity item are not affected.
 ///
 ///  * Setting the value to 0.0 resets the timeout -- if applied to the `systemWideElement`, the global default will be reset to its default value; if applied to another axuielement object, the timeout will be reset to the current global value as applied to the systemWideElement.
@@ -691,7 +691,7 @@ static int axuielement_setTimeout(lua_State *L) {
 
 #pragma mark - Module Constants
 
-/// hs._asm.axuielement.roles[]
+/// hs.axuielement.roles[]
 /// Constant
 /// A table of common accessibility object roles, provided for reference.
 ///
@@ -760,7 +760,7 @@ static int axuielement_pushRolesTable(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement.subroles[]
+/// hs.axuielement.subroles[]
 /// Constant
 /// A table of common accessibility object subroles, provided for reference.
 ///
@@ -808,7 +808,7 @@ static int axuielement_pushSubrolesTable(lua_State *L) {
    return 1 ;
 }
 
-/// hs._asm.axuielement.attributes[]
+/// hs.axuielement.attributes[]
 /// Constant
 /// A table of common accessibility object attribute names, provided for reference. The names are grouped into the following subcategories (keys):
 ///
@@ -1049,7 +1049,7 @@ static int axuielement_pushAttributesTable(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement.parameterizedAttributes[]
+/// hs.axuielement.parameterizedAttributes[]
 /// Constant
 /// A table of common accessibility object parameterized attribute names, provided for reference.
 ///
@@ -1076,7 +1076,7 @@ static int axuielement_pushParamaterizedAttributesTable(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement.actions[]
+/// hs.axuielement.actions[]
 /// Constant
 /// A table of common accessibility object action names, provided for reference.
 ///
@@ -1098,7 +1098,7 @@ static int axuielement_pushActionsTable(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement.directions[]
+/// hs.axuielement.directions[]
 /// Constant
 /// A table of common directions which may be specified as the value of an accessibility object property, provided for reference.
 ///
@@ -1213,14 +1213,14 @@ static luaL_Reg moduleLib[] = {
 //     {NULL,   NULL}
 // } ;
 
-int luaopen_hs__asm_axuielement_internal(lua_State* L) {
+int luaopen_hs_axuielement_internal(lua_State* L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     refTable = [skin registerLibraryWithObject:USERDATA_TAG
                                      functions:moduleLib
                                  metaFunctions:nil
                                objectFunctions:userdata_metaLib] ;
 
-    luaopen_hs__asm_axuielement_observer(L) ; lua_setfield(L, -2, "observer") ;
+    luaopen_hs_axuielement_observer(L) ; lua_setfield(L, -2, "observer") ;
 
 // For reference, since the object __init wrapper in init.lua and the keys for elementSearch don't
 // actually use them in case the user wants to use an Application defined attribute or action not

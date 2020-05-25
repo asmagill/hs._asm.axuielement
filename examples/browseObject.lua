@@ -1,4 +1,4 @@
-local USERDATA_TAG = "hs._asm.axuielement"
+local USERDATA_TAG = "hs.axuielement"
 local module       = {}
 local ax           = require(USERDATA_TAG)
 

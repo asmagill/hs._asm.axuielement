@@ -1,4 +1,4 @@
-Exploring and Crafting Queries for `hs._asm.axuielement`
+Exploring and Crafting Queries for `hs.axuielement`
 ========================================================
 
 Manipulating a macOS application through its Accessibility objects can be a confusing task. While many of the standard components used in macOS applications have default attributes and actions enabled, each application can modify or extend these in many different ways.
@@ -14,7 +14,7 @@ This walkthrough is provided as an example of how some of the functions provided
 For starters, let's define a few shortcuts that we can use along the way (note, except where otherwise described, it is expected that you will select the entire code block and copy-paste it in its entirety into the console if you're trying this out yourself while reading this):
 
 ~~~lua
-ax = require("hs._asm.axuielement")
+ax = require("hs.axuielement")
 inspect = require("hs.inspect")
 timestamp = function(date)
     date = date or require"hs.timer".secondsSinceEpoch()
@@ -49,16 +49,16 @@ This results in something along the lines of:
   AXRoleDescription = "application",
   AXTitle = "Safari",
   AXWindows = { <table 2>, <table 4> },
-  _element = <userdata 3078> -- hs._asm.axuielement: AXApplication (0x600000850080)
+  _element = <userdata 3078> -- hs.axuielement: AXApplication (0x600000850080)
 }
 2016-10-04 23:15:53.62
 ~~~
 
 Not quite 20 seconds... definitely not something you want to do often, but useful to see just what information is provided.  I zeroed in on the AXLink objects as something that might be useful to be able to grab (not shown here, but if you run this yourself, you'll see them).
 
-Next, we have two primary ways to look for the links... `hs._asm.axuielement:elementSearch` and `hs._asm.axuielement:searchPath`.
+Next, we have two primary ways to look for the links... `hs.axuielement:elementSearch` and `hs.axuielement:searchPath`.
 
-##### hs._asm.axuielement:elementSearch
+##### hs.axuielement:elementSearch
 
 `elementSearch` works by iterating through the accessibility hierarchy starting at the object the method is called on and returns all objects which match the specified criteria.  It *always* runs through the entire hierarchy (from it's starting point) and returns *all* matching objects:
 
@@ -111,7 +111,7 @@ Results in:
 20
 ~~~
 
-##### hs._asm.axuielement:searchPath
+##### hs.axuielement:searchPath
 
 `searchPath` returns one accessibility object at a time, but allows us to more narrowly target the query, resulting in a significant speedup.  Let's start with just our desired targets:
 
@@ -140,17 +140,17 @@ Results in (cleaned up for easier reading):
 
 ~~~
 {
-    <userdata 1> -- hs._asm.axuielement: AXApplication (0x600001a4cff0),
-    <userdata 2> -- hs._asm.axuielement: AXWindow (0x600001a4c4e0),
-    <userdata 3> -- hs._asm.axuielement: AXSplitGroup (0x608000e4d7d0),
-    <userdata 4> -- hs._asm.axuielement: AXTabGroup (0x600001a59350),
-    <userdata 5> -- hs._asm.axuielement: AXGroup (0x600001a58a80),
-    <userdata 6> -- hs._asm.axuielement: AXGroup (0x60800044e100),
-    <userdata 7> -- hs._asm.axuielement: AXScrollArea (0x600001a49a50),
-    <userdata 8> -- hs._asm.axuielement: AXWebArea (0x608000e560b0),
-    <userdata 9> -- hs._asm.axuielement: AXGroup (0x600001a43d80),
-    <userdata 10> -- hs._asm.axuielement: AXGroup (0x608001649120),
-    <userdata 11> -- hs._asm.axuielement: AXLink (0x60000145dd30)
+    <userdata 1> -- hs.axuielement: AXApplication (0x600001a4cff0),
+    <userdata 2> -- hs.axuielement: AXWindow (0x600001a4c4e0),
+    <userdata 3> -- hs.axuielement: AXSplitGroup (0x608000e4d7d0),
+    <userdata 4> -- hs.axuielement: AXTabGroup (0x600001a59350),
+    <userdata 5> -- hs.axuielement: AXGroup (0x600001a58a80),
+    <userdata 6> -- hs.axuielement: AXGroup (0x60800044e100),
+    <userdata 7> -- hs.axuielement: AXScrollArea (0x600001a49a50),
+    <userdata 8> -- hs.axuielement: AXWebArea (0x608000e560b0),
+    <userdata 9> -- hs.axuielement: AXGroup (0x600001a43d80),
+    <userdata 10> -- hs.axuielement: AXGroup (0x608001649120),
+    <userdata 11> -- hs.axuielement: AXLink (0x60000145dd30)
 }
 ~~~
 
@@ -465,7 +465,7 @@ About as direct a search as we could hope for.  I have a suspicion that adding t
 The vague idea of examining Safari became how to get at the links in a window... I've show one way that has worked for a number of pages that I've checked, but along the way I came across an accessibility attribute I missed entirely the first time I looked at the tree for Safari: AXLinkUIElements is an element of AXWebArea.
 
 ~~~lua
-ax = require("hs._asm.axuielement")
+ax = require("hs.axuielement")
 sw = ax.windowElement(hs.application("Safari"):mainWindow())
 print(timestamp())
 webArea = sw:searchPath({

@@ -5,8 +5,8 @@
 
 // #import "AXTextMarker.h"
 
-#define USERDATA_TAG "hs._asm.axuielement"
-#define OBSERVER_TAG "hs._asm.axuielement.observer"
+#define USERDATA_TAG "hs.axuielement"
+#define OBSERVER_TAG "hs.axuielement.observer"
 
 #define get_axuielementref(L, idx, tag) *((AXUIElementRef*)luaL_checkudata(L, idx, tag))
 #define get_axobserverref(L, idx, tag) *((AXObserverRef*)luaL_checkudata(L, idx, tag))
@@ -24,4 +24,4 @@ extern const char *AXErrorAsString(AXError theError) ;
 extern int pushCFTypeToLua(lua_State *L, CFTypeRef theItem, int refTable) ;
 extern CFTypeRef lua_toCFType(lua_State *L, int idx) ;
 
-int luaopen_hs__asm_axuielement_observer(lua_State* L) ;
+int luaopen_hs_axuielement_observer(lua_State* L) ;

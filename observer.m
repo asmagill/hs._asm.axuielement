@@ -1,6 +1,6 @@
 #import "common.h"
 
-/// === hs._asm.axuielement.observer ===
+/// === hs.axuielement.observer ===
 ///
 /// This submodule allows you to create observers for accessibility elements and be notified when they trigger notifications. Not all notifications are supported by all elements and not all elements support notifications, so some trial and error will be necessary, but for compliant applications, this can allow your code to be notified when an application's user interface changes in some way.
 ///
@@ -112,7 +112,7 @@ static void observerCallback(AXObserverRef observer, AXUIElementRef element, CFS
 
 #pragma mark - Module Functions
 
-/// hs._asm.axuielement.observer.new(pid) -> observerObject
+/// hs.axuielement.observer.new(pid) -> observerObject
 /// Constructor
 /// Creates a new observer object for the application with the specified process ID.
 ///
@@ -124,7 +124,7 @@ static void observerCallback(AXObserverRef observer, AXUIElementRef element, CFS
 ///
 /// Notes:
 ///  * If you already have the `hs.application` object for an application, you can get its process ID with `hs.application:pid()`
-///  * If you already have an `hs._asm.axuielement` from the application you wish to observe (it doesn't have to be the application axuielement object, just one belonging to the application), you can get the process ID with `hs._asm.axuielement:pid()`.
+///  * If you already have an `hs.axuielement` from the application you wish to observe (it doesn't have to be the application axuielement object, just one belonging to the application), you can get the process ID with `hs.axuielement:pid()`.
 static int axobserver_new(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TNUMBER | LS_TINTEGER, LS_TBREAK] ;
@@ -143,7 +143,7 @@ static int axobserver_new(lua_State *L) {
 
 #pragma mark - Module Methods
 
-/// hs._asm.axuielement.observer:start() -> observerObject
+/// hs.axuielement.observer:start() -> observerObject
 /// Method
 /// Start observing the application and trigger callbacks for the elements and notifications assigned.
 ///
@@ -170,7 +170,7 @@ static int axobserver_start(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement.observer:stop() -> observerObject
+/// hs.axuielement.observer:stop() -> observerObject
 /// Method
 /// Stop observing the application; no further callbacks will be generated.
 ///
@@ -197,7 +197,7 @@ static int axobserver_stop(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement.observer:isRunning() -> boolean
+/// hs.axuielement.observer:isRunning() -> boolean
 /// Method
 /// Returns true or false indicating whether the observer is currently watching for notifications and generating callbacks.
 ///
@@ -216,7 +216,7 @@ static int axobserver_isRunning(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement.observer:callback([fn | nil]) -> observerObject | fn | nil
+/// hs.axuielement.observer:callback([fn | nil]) -> observerObject | fn | nil
 /// Method
 /// Get or set the callback for the observer.
 ///
@@ -229,7 +229,7 @@ static int axobserver_isRunning(lua_State *L) {
 /// Notes:
 ///  * the callback should expect 4 arguments and return none. The arguments passed to the callback will be as follows:
 ///    * the observerObject itself
-///    * the `hs._asm.axuielement` object for the accessibility element which generated the notification
+///    * the `hs.axuielement` object for the accessibility element which generated the notification
 ///    * a string specifying the specific notification which was received
 ///    * a table containing key-value pairs with more information about the notification, if the element and notification type provide it. Commonly this will be an empty table indicating that no additional detail was provided.
 static int axobserver_callback(lua_State *L) {
@@ -258,12 +258,12 @@ static int axobserver_callback(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement.observer:addWatcher(element, notification) -> observerObject
+/// hs.axuielement.observer:addWatcher(element, notification) -> observerObject
 /// Method
 /// Registers the specified notification for the specified accesibility element with the observer.
 ///
 /// Parameters:
-///  * `element`      - the `hs._asm.axuielement` representing an accessibility element of the application the observer was created for.
+///  * `element`      - the `hs.axuielement` representing an accessibility element of the application the observer was created for.
 ///  * `notification` - a string specifying the notification.
 ///
 /// Returns:
@@ -272,7 +272,7 @@ static int axobserver_callback(lua_State *L) {
 /// Notes:
 ///  * multiple notifications for the same accessibility element can be registered by invoking this method multiple times with the same element but different notification strings.
 ///  * if the specified element and notification string are already registered, this method does nothing.
-///  * the notification string is application dependent and can be any string that the application developers choose; some common ones are found in `hs._asm.axuielement.observer.notifications`, but the list is not exhaustive nor is an application or element required to provide them.
+///  * the notification string is application dependent and can be any string that the application developers choose; some common ones are found in `hs.axuielement.observer.notifications`, but the list is not exhaustive nor is an application or element required to provide them.
 static int axobserver_addWatchedElement(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG,
@@ -303,12 +303,12 @@ static int axobserver_addWatchedElement(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement.observer:removeWatcher(element, notification) -> observerObject
+/// hs.axuielement.observer:removeWatcher(element, notification) -> observerObject
 /// Method
 /// Unregisters the specified notification for the specified accessibility element from the observer.
 ///
 /// Parameters:
-///  * `element`      - the `hs._asm.axuielement` representing an accessibility element of the application the observer was created for.
+///  * `element`      - the `hs.axuielement` representing an accessibility element of the application the observer was created for.
 ///  * `notification` - a string specifying the notification.
 ///
 /// Returns:
@@ -343,19 +343,19 @@ static int axobserver_removeWatchedElement(lua_State *L) {
     return 1 ;
 }
 
-/// hs._asm.axuielement.observer:watching([element]) -> table
+/// hs.axuielement.observer:watching([element]) -> table
 /// Method
 /// Returns a table of the notifications currently registered with the observer.
 ///
 /// Parameters:
-///  * `element` - an optional `hs._asm.axuielement` to return a list of registered notifications for.
+///  * `element` - an optional `hs.axuielement` to return a list of registered notifications for.
 ///
 /// Returns:
 ///  * a table containing the currently registered notifications
 ///
 /// Notes:
 ///  * If an element is specified, then the table returned will contain a list of strings specifying the specific notifications that the observer is watching that element for.
-///  * If no argument is specified, then the table will contain key-value pairs in which each key will be an `hs._asm.axuielement` that is being observed and the corresponding value will be a table containing a list of strings specifying the specific notifications that the observer is watching for from from that element.
+///  * If no argument is specified, then the table will contain key-value pairs in which each key will be an `hs.axuielement` that is being observed and the corresponding value will be a table containing a list of strings specifying the specific notifications that the observer is watching for from from that element.
 static int axobserver_watchedElements(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK | LS_TVARARG] ;
@@ -397,7 +397,7 @@ static int axobserver_internalDetails(lua_State *L) {
 
 #pragma mark - Module Constants
 
-/// hs._asm.axuielement.observer.notifications[]
+/// hs.axuielement.observer.notifications[]
 /// Constant
 /// A table of common accessibility object notification names, provided for reference.
 ///
@@ -546,7 +546,7 @@ static const luaL_Reg module_metaLib[] = {
     {NULL,   NULL}
 } ;
 
-int luaopen_hs__asm_axuielement_observer(lua_State* L) {
+int luaopen_hs_axuielement_observer(lua_State* L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     refTable = [skin registerLibraryWithObject:OBSERVER_TAG
                                      functions:moduleLib

@@ -1,5 +1,5 @@
 local module = {}
-local ax      = require("hs._asm.axuielement")
+local ax      = require("hs.axuielement")
 local fnutils = require("hs.fnutils")
 local inspect = require("hs.inspect")
 
@@ -7,7 +7,7 @@ local hierarchy
 hierarchy = function(obj, indent, seen)
     indent = indent or 0
     seen = seen or {}
-    if getmetatable(obj) == hs.getObjectMetatable("hs._asm.axuielement") then
+    if getmetatable(obj) == hs.getObjectMetatable("hs.axuielement") then
         if fnutils.find(seen, function(_) return _ == obj end) then return end -- probably not necessary, but be safe
         table.insert(seen, obj)
 
@@ -19,7 +19,7 @@ hierarchy = function(obj, indent, seen)
                 print(string.format("%s%s->%s: <topLevelUIElement>", string.rep(" ", indent), string.rep(" ", #obj:role()), attrName))
             else
                 local attrValue = obj:attributeValue(attrName)
-                if getmetatable(attrValue) == hs.getObjectMetatable("hs._asm.axuielement") then
+                if getmetatable(attrValue) == hs.getObjectMetatable("hs.axuielement") then
                     if fnutils.find(seen, function(_) return _ == obj end) then
                         print(string.format("%s%s->%s: <seen before>", string.rep(" ", indent), string.rep(" ", #obj:role()), attrName))
                     else

@@ -1,4 +1,4 @@
-hs._asm.axuielement.observer
+hs.axuielement.observer
 ============================
 
 This submodule allows you to create observers for accessibility elements and be notified when they trigger notifications. Not all notifications are supported by all elements and not all elements support notifications, so some trial and error will be necessary, but for compliant applications, this can allow your code to be notified when an application's user interface changes in some way.
@@ -8,7 +8,7 @@ This is very much a work in progress, so bugs and comments are welcome.
 For a very basic example, with Safari running, enter the following into your Hammerspoon console:
 
 ~~~lua
-ax = require("hs._asm.axuielement")
+ax = require("hs.axuielement")
 o = ax.observer.new(hs.application("Safari"):pid())
     :callback(function(...) print(hs.inspect(table.pack(...), { newline = " ", indent = "" })) end)
     :addWatcher(ax.windowElement(hs.application("Safari"):allWindows()[1]), "AXTitleChanged")
@@ -17,11 +17,11 @@ o = ax.observer.new(hs.application("Safari"):pid())
 
 Now, click on a link or select a bookmark to trigger the callback as the window's title changes.
 
-If you do observe unexpected behavior with the observer submodule (that didn't result in a crash), when submitting a bug report please include the results of `hs.inspect(require("hs._asm.axuielement").observer._internals())` if possible.
+If you do observe unexpected behavior with the observer submodule (that didn't result in a crash), when submitting a bug report please include the results of `hs.inspect(require("hs.axuielement").observer._internals())` if possible.
 
 ### Usage
 ~~~lua
-observer = require("hs._asm.axuielement").observer
+observer = require("hs.axuielement").observer
 ~~~
 
 ### Contents
@@ -60,7 +60,7 @@ Returns:
 
 Notes:
  * If you already have the `hs.application` object for an application, you can get its process ID with `hs.application:pid()`
- * If you already have an `hs._asm.axuielement` from the application you wish to observe (it doesn't have to be the application axuielement object, just one belonging to the application), you can get the process ID with `hs._asm.axuielement:pid()`.
+ * If you already have an `hs.axuielement` from the application you wish to observe (it doesn't have to be the application axuielement object, just one belonging to the application), you can get the process ID with `hs.axuielement:pid()`.
 
 ### Module Methods
 
@@ -71,7 +71,7 @@ observer:addWatcher(element, notification) -> observerObject
 Registers the specified notification for the specified accesibility element with the observer.
 
 Parameters:
- * `element`      - the `hs._asm.axuielement` representing an accessibility element of the application the observer was created for.
+ * `element`      - the `hs.axuielement` representing an accessibility element of the application the observer was created for.
  * `notification` - a string specifying the notification.
 
 Returns:
@@ -80,7 +80,7 @@ Returns:
 Notes:
  * multiple notifications for the same accessibility element can be registered by invoking this method multiple times with the same element but different notification strings.
  * if the specified element and notification string are already registered, this method does nothing.
- * the notification string is application dependent and can be any string that the application developers choose; some common ones are found in `hs._asm.axuielement.observer.notifications`, but the list is not exhaustive nor is an application or element required to provide them.
+ * the notification string is application dependent and can be any string that the application developers choose; some common ones are found in `hs.axuielement.observer.notifications`, but the list is not exhaustive nor is an application or element required to provide them.
 
 - - -
 
@@ -99,7 +99,7 @@ Returns:
 Notes:
  * the callback should expect 4 arguments and return none. The arguments passed to the callback will be as follows:
    * the observerObject itself
-   * the `hs._asm.axuielement` object for the accessibility element which generated the notification
+   * the `hs.axuielement` object for the accessibility element which generated the notification
    * a string specifying the specific notification which was received
    * a table containing key-value pairs with more information about the notification, if the element and notification type provide it. Commonly this will be an empty table indicating that no additional detail was provided.
 
@@ -126,7 +126,7 @@ observer:removeWatcher(element, notification) -> observerObject
 Unregisters the specified notification for the specified accessibility element from the observer.
 
 Parameters:
- * `element`      - the `hs._asm.axuielement` representing an accessibility element of the application the observer was created for.
+ * `element`      - the `hs.axuielement` representing an accessibility element of the application the observer was created for.
  * `notification` - a string specifying the notification.
 
 Returns:
@@ -178,14 +178,14 @@ observer:watching([element]) -> table
 Returns a table of the notifications currently registered with the observer.
 
 Parameters:
- * `element` - an optional `hs._asm.axuielement` to return a list of registered notifications for.
+ * `element` - an optional `hs.axuielement` to return a list of registered notifications for.
 
 Returns:
  * a table containing the currently registered notifications
 
 Notes:
  * If an element is specified, then the table returned will contain a list of strings specifying the specific notifications that the observer is watching that element for.
- * If no argument is specified, then the table will contain key-value pairs in which each key will be an `hs._asm.axuielement` that is being observed and the corresponding value will be a table containing a list of strings specifying the specific notifications that the observer is watching for from from that element.
+ * If no argument is specified, then the table will contain key-value pairs in which each key will be an `hs.axuielement` that is being observed and the corresponding value will be a table containing a list of strings specifying the specific notifications that the observer is watching for from from that element.
 
 ### Module Constants
 

@@ -1,4 +1,4 @@
-hs._asm.axuielement
+hs.axuielement
 ===================
 
 This module allows you to access the accessibility objects of running applications, their windows, menus, and other user interface elements that support the OS X accessibility API.
@@ -10,22 +10,22 @@ This module works through the use of axuielementObjects, which is the Hammerspoo
 The basic methods available to determine what attributes and actions are available for a given object are described in this reference documentation.  In addition, the module will dynamically add methods for the attributes and actions appropriate to the object, but these will differ between object roles and applications -- again we are limited by what the target application developers provide us.
 
 The dynamically generated methods will follow one of the following templates:
- * `object:*attribute*()`         - this will return the value for the specified attribute (see [hs._asm.axuielement:attributeValue](#attributeValue) for the generic function this is based on).
- * `object:set*attribute*(value)` - this will set the specified attribute to the given value (see [hs._asm.axuielement:setAttributeValue](#setAttributeValue) for the generic function this is based on).
- * `object:do*action*()`          - this request that the specified action is performed by the object (see [hs._asm.axuielement:performAction](#performAction) for the generic function this is based on).
+ * `object:*attribute*()`         - this will return the value for the specified attribute (see [hs.axuielement:attributeValue](#attributeValue) for the generic function this is based on).
+ * `object:set*attribute*(value)` - this will set the specified attribute to the given value (see [hs.axuielement:setAttributeValue](#setAttributeValue) for the generic function this is based on).
+ * `object:do*action*()`          - this request that the specified action is performed by the object (see [hs.axuielement:performAction](#performAction) for the generic function this is based on).
 
 Where *action* and *attribute* can be the formal Accessibility version of the attribute or action name (a string usually prefixed with "AX") or without the "AX" prefix.  When the prefix is left off, the first letter of the action or attribute can be uppercase or lowercase.
 
 The module also dynamically supports treating the axuielementObject useradata as an array, to access it's children (i.e. `#object` will return a number, indicating the number of direct children the object has, and `object[1]` is equivalent to `object:children()[1]` or, more formally, `object:attributeValue("AXChildren")[1]`).
 
-You can also treat the axuielementObject userdata as a table of key-value pairs to generate a list of the dynamically generated functions: `for k, v in pairs(object) do print(k, v) end` (this is essentially what [hs._asm.axuielement:dynamicMethods](#dynamicMethods) does).
+You can also treat the axuielementObject userdata as a table of key-value pairs to generate a list of the dynamically generated functions: `for k, v in pairs(object) do print(k, v) end` (this is essentially what [hs.axuielement:dynamicMethods](#dynamicMethods) does).
 
 
 Limited support for parameterized attributes is provided, but is not yet complete.  This is expected to see updates in the future.
 
 ### Usage
 ~~~lua
-axuielement = require("hs._asm.axuielement")
+axuielement = require("hs.axuielement")
 ~~~
 
 ### Contents
@@ -115,7 +115,7 @@ Returns:
  * an axuielementObject for the object at the specified coordinates, or nil if no object could be identified.
 
 Notes:
- * See also [hs._asm.axuielement:elementAtPosition](#elementAtPosition) -- this function is a shortcut for `hs._asm.axuielement.systemWideElement():elementAtPosition(...)`.
+ * See also [hs.axuielement:elementAtPosition](#elementAtPosition) -- this function is a shortcut for `hs.axuielement.systemWideElement():elementAtPosition(...)`.
 
  * This function does hit-testing based on window z-order (that is, layering). If one window is on top of another window, the returned accessibility object comes from whichever window is topmost at the specified location.
 
@@ -156,7 +156,7 @@ axuielement:actionDescription(action) -> string
 Returns a localized description of the specified accessibility object's action.
 
 Parameters:
- * `action` - the name of the action, as specified by [hs._asm.axuielement:actionNames](#actionNames).
+ * `action` - the name of the action, as specified by [hs.axuielement:actionNames](#actionNames).
 
 Returns:
  * a string containing a description of the object's action
@@ -179,7 +179,7 @@ Returns:
  * an array of the names of all actions supported by the axuielementObject
 
 Notes:
- * Common action names can be found in the [hs._asm.axuielement.actions](#actions) table; however, this method will list only those names which are supported by this object, and is not limited to just those in the referenced table.
+ * Common action names can be found in the [hs.axuielement.actions](#actions) table; however, this method will list only those names which are supported by this object, and is not limited to just those in the referenced table.
 
 - - -
 
@@ -244,7 +244,7 @@ Returns:
  * an array of the names of all attributes supported by the axuielementObject
 
 Notes:
- * Common attribute names can be found in the [hs._asm.axuielement.attributes](#attributes) tables; however, this method will list only those names which are supported by this object, and is not limited to just those in the referenced table.
+ * Common attribute names can be found in the [hs.axuielement.attributes](#attributes) tables; however, this method will list only those names which are supported by this object, and is not limited to just those in the referenced table.
 
 - - -
 
@@ -255,7 +255,7 @@ axuielement:attributeValue(attribute) -> value
 Returns the value of an accessibility object's attribute.
 
 Parameters:
- * `attribute` - the name of the attribute, as specified by [hs._asm.axuielement:attributeNames](#attributeNames).
+ * `attribute` - the name of the attribute, as specified by [hs.axuielement:attributeNames](#attributeNames).
 
 Returns:
  * the current value of the attribute, or nil if the attribute has no value
@@ -269,7 +269,7 @@ axuielement:attributeValueCount(attribute) -> integer
 Returns the count of the array of an accessibility object's attribute value.
 
 Parameters:
- * `attribute` - the name of the attribute, as specified by [hs._asm.axuielement:attributeNames](#attributeNames).
+ * `attribute` - the name of the attribute, as specified by [hs.axuielement:attributeNames](#attributeNames).
 
 Returns:
  * the number of items in the value for the attribute, if it is an array, or nil if the value is not an array.
@@ -344,11 +344,11 @@ Returns:
  * an axuielementObject for the object at the specified coordinates, or nil if no object could be identified.
 
 Notes:
- * This method can only be called on an axuielementObject that represents an application or the system-wide element (see [hs._asm.axuielement.systemWideElement](#systemWideElement)).
+ * This method can only be called on an axuielementObject that represents an application or the system-wide element (see [hs.axuielement.systemWideElement](#systemWideElement)).
 
  * This function does hit-testing based on window z-order (that is, layering). If one window is on top of another window, the returned accessibility object comes from whichever window is topmost at the specified location.
  * If this method is called on an axuielementObject representing an application, the search is restricted to the application.
- * If this method is called on an axuielementObject representing the system-wide element, the search is not restricted to any particular application.  See [hs._asm.axuielement.systemElementAtPosition](#systemElementAtPosition).
+ * If this method is called on an axuielementObject representing the system-wide element, the search is not restricted to any particular application.  See [hs.axuielement.systemElementAtPosition](#systemElementAtPosition).
 
 - - -
 
@@ -359,7 +359,7 @@ axuielement:isAttributeSettable(attribute) -> boolean
 Returns whether the specified accessibility object's attribute can be modified.
 
 Parameters:
- * `attribute` - the name of the attribute, as specified by [hs._asm.axuielement:attributeNames](#attributeNames).
+ * `attribute` - the name of the attribute, as specified by [hs.axuielement:attributeNames](#attributeNames).
 
 Returns:
  * a boolean value indicating whether or not the value of the parameter can be modified.
@@ -401,7 +401,7 @@ axuielement:parameterizedAttributeValue(attribute, parameter) -> value
 Returns the value of an accessibility object's parameterized attribute.
 
 Parameters:
- * `attribute` - the name of the attribute, as specified by [hs._asm.axuielement:parameterizedAttributeNames](#parameterizedAttributeNames).
+ * `attribute` - the name of the attribute, as specified by [hs.axuielement:parameterizedAttributeNames](#parameterizedAttributeNames).
  * `parameter` - the parameter
 
 Returns:
@@ -438,7 +438,7 @@ axuielement:performAction(action) -> axuielement | false | nil
 Requests that the specified accessibility object perform the specified action.
 
 Parameters:
- * `action` - the name of the action, as specified by [hs._asm.axuielement:actionNames](#actionNames).
+ * `action` - the name of the action, as specified by [hs.axuielement:actionNames](#actionNames).
 
 Returns:
  * if the requested action was accepted by the target, returns the axuielementObject; if the requested action was rejected, returns false, otherwise returns nil on error.
@@ -469,7 +469,7 @@ axuielement:setAttributeValue(attribute, value) -> axuielementObject | nil
 Sets the accessibility object's attribute to the specified value.
 
 Parameters:
- * `attribute` - the name of the attribute, as specified by [hs._asm.axuielement:attributeNames](#attributeNames).
+ * `attribute` - the name of the attribute, as specified by [hs.axuielement:attributeNames](#attributeNames).
  * `value`     - the value to assign to the attribute
 
 Returns:
@@ -493,7 +493,7 @@ Returns:
  * the axuielementObject
 
 Notes:
- * To change the global timeout affecting all queries on elements which do not have a specific timeout set, use this method on the systemwide element (see [hs._asm.axuielement.systemWideElement](#systemWideElement).
+ * To change the global timeout affecting all queries on elements which do not have a specific timeout set, use this method on the systemwide element (see [hs.axuielement.systemWideElement](#systemWideElement).
  * Changing the timeout value for an axuielement object only changes the value for that specific element -- other axuieleement objects that may refere to the identical accessibiity item are not affected.
 
  * Setting the value to 0.0 resets the timeout -- if applied to the `systemWideElement`, the global default will be reset to its default value; if applied to another axuielement object, the timeout will be reset to the current global value as applied to the systemWideElement.

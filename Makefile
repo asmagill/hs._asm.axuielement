@@ -3,7 +3,7 @@ current_dir := $(notdir $(patsubst %/,%,$(dir $(mkfile_path))))
 
 MODULE := $(lastword $(subst ., ,$(current_dir)))
 PREFIX ?= ~/.hammerspoon
-MODPATH = hs/_asm
+MODPATH = hs
 VERSION ?= 0.x
 HS_APPLICATION ?= /Applications
 

@@ -1,4 +1,4 @@
-hs._asm.axuielement
+hs.axuielement
 ===================
 
 *** Version 0.7.6+ is a stripped down version, removing some of the more complex search methods to see what the primary functionality required for inclusion in core and migrating some existing fatures to a more responsive model will require (e.g. `hs.application:getMenuItems`). ***
@@ -31,7 +31,7 @@ $ cd wherever-you-downloaded-the-files
 $ [HS_APPLICATION=/Applications] [PREFIX=~/.hammerspoon] make install
 ~~~
 
-If you choose to clone the repository, the directory name the code will be in will be named `hs._asm.axuielement`. As noted in issue #14, this will cause the module install path to be incorrect when `make install` is run. If you want to clone the entire repository, currently the easiest fix is to rename the directory and build it like this:
+If you choose to clone the repository, the directory name the code will be in will be named `hs.axuielement`. As noted in issue #14, this will cause the module install path to be incorrect when `make install` is run. If you want to clone the entire repository, currently the easiest fix is to rename the directory and build it like this:
 
 ~~~sh
 $ git clone https://github.com/asmagill/hs._asm.axuielement.git
@@ -52,7 +52,7 @@ These will probably move to the examples folder at some point, but since they ha
 
 ##### Activate Dock item by position in Dock [#953](https://github.com/Hammerspoon/hammerspoon/issues/953)
 ~~~lua
-ax = require("hs._asm.axuielement")
+ax = require("hs.axuielement")
 d = hs.application("Dock")
 iconNumber = 1 -- position in the dock, starting with 1 being the furthest left item
 icon = ax.applicationElement(d)[1][iconNumber]
@@ -65,7 +65,7 @@ end
 
 ##### Dock Item context menu [#887](https://github.com/Hammerspoon/hammerspoon/issues/887)
 ~~~lua
-ax = require"hs._asm.axuielement"
+ax = require"hs.axuielement"
 SPDockItem = ax.applicationElement(hs.application("Dock")):elementSearch{title="System Preferences"}[1]
 SPDockItem:doShowMenu()
 SPDockItem[1]:elementSearch{title="General"}[1]:doPress()
@@ -84,7 +84,7 @@ target = (#dictationWindows == 1) and dictationWindows[1]
              or hs.fnutils.find(dictationWindows, function(_) return _:subrole() == "AXCloseButton" end)
 
 -- whichever we got, "press" it
-ax = require("hs._asm.axuielement")
+ax = require("hs.axuielement")
 ax.windowElement(target):doPress()
 ~~~
 
@@ -99,7 +99,7 @@ Don't know if this will become a module or not; its mainly for playing around ri
 Some interesting things of note:
 
 ~~~lua
-ax = require("hs._asm.axuielement")
+ax = require("hs.axuielement")
 ~~~
 
 ### 2016-01-09 additions:

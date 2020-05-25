@@ -1,5 +1,13 @@
-hs._asm.axuielement
+hs.axuielement
 ===================
+
+This is being integrated into the core Hammerspoon application. This repository will likely hang around for a while sine it's faster to rebuild this than the entire application when trying out new features -- and there are still a few I hope to bring back now that coroutines are normalized -- but the "official" version will be with the Hammerspoon development branch.
+
+Version 0.7.6 will be the last version that installs as `hs._asm.axuielement`. Starting with version `1.0`, this module now installs itself as `hs.axuielement`.
+
+Functionally, 1.0 is equivalent to 0.7.6, however. This will likely change in the future as I test out the additions and return of functionality currently planned, assuming test versions are set up here for distribution before finally making it into core.
+
+- - -
 
 *** Version 0.7.6+ is a stripped down version, removing some of the more complex search methods to see what the primary functionality required for inclusion in core and migrating some existing fatures to a more responsive model will require (e.g. `hs.application:getMenuItems`). ***
 
@@ -44,8 +52,8 @@ As always, whichever method you chose, if you are updating from an earlier versi
 
 ### Reference Contents
 
-* [hs._asm.axuielement](Reference_Core.md)
-* [hs._asm.axuielement.observer](Reference_Observers.md)
+* [hs.axuielement](Reference_Core.md)
+* [hs.axuielement.observer](Reference_Observers.md)
 * ~~[Some examples](Queries.md)~~ -- uses temporarily disabled methods
 * [TODO](TODO.txt)
 

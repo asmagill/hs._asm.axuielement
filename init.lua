@@ -1,4 +1,4 @@
---- === hs._asm.axuielement ===
+--- === hs.axuielement ===
 ---
 --- This module allows you to access the accessibility objects of running applications, their windows, menus, and other user interface elements that support the OS X accessibility API.
 ---
@@ -9,20 +9,20 @@
 --- The basic methods available to determine what attributes and actions are available for a given object are described in this reference documentation.  In addition, the module will dynamically add methods for the attributes and actions appropriate to the object, but these will differ between object roles and applications -- again we are limited by what the target application developers provide us.
 ---
 --- The dynamically generated methods will follow one of the following templates:
----  * `object:*attribute*()`         - this will return the value for the specified attribute (see [hs._asm.axuielement:attributeValue](#attributeValue) for the generic function this is based on).
----  * `object:set*attribute*(value)` - this will set the specified attribute to the given value (see [hs._asm.axuielement:setAttributeValue](#setAttributeValue) for the generic function this is based on).
----  * `object:do*action*()`          - this request that the specified action is performed by the object (see [hs._asm.axuielement:performAction](#performAction) for the generic function this is based on).
+---  * `object:*attribute*()`         - this will return the value for the specified attribute (see [hs.axuielement:attributeValue](#attributeValue) for the generic function this is based on).
+---  * `object:set*attribute*(value)` - this will set the specified attribute to the given value (see [hs.axuielement:setAttributeValue](#setAttributeValue) for the generic function this is based on).
+---  * `object:do*action*()`          - this request that the specified action is performed by the object (see [hs.axuielement:performAction](#performAction) for the generic function this is based on).
 ---
 --- Where *action* and *attribute* can be the formal Accessibility version of the attribute or action name (a string usually prefixed with "AX") or without the "AX" prefix.  When the prefix is left off, the first letter of the action or attribute can be uppercase or lowercase.
 ---
 --- The module also dynamically supports treating the axuielementObject useradata as an array, to access it's children (i.e. `#object` will return a number, indicating the number of direct children the object has, and `object[1]` is equivalent to `object:children()[1]` or, more formally, `object:attributeValue("AXChildren")[1]`).
 ---
---- You can also treat the axuielementObject userdata as a table of key-value pairs to generate a list of the dynamically generated functions: `for k, v in pairs(object) do print(k, v) end` (this is essentially what [hs._asm.axuielement:dynamicMethods](#dynamicMethods) does).
+--- You can also treat the axuielementObject userdata as a table of key-value pairs to generate a list of the dynamically generated functions: `for k, v in pairs(object) do print(k, v) end` (this is essentially what [hs.axuielement:dynamicMethods](#dynamicMethods) does).
 ---
 ---
 --- Limited support for parameterized attributes is provided, but is not yet complete.  This is expected to see updates in the future.
 
-local USERDATA_TAG = "hs._asm.axuielement"
+local USERDATA_TAG = "hs.axuielement"
 
 if not hs.accessibilityState(true) then
     hs.luaSkinLog.ef("%s - module requires accessibility to be enabled; fix in SystemPreferences -> Privacy & Security and restart Hammerspoon", USERDATA_TAG)
@@ -31,13 +31,13 @@ end
 
 local module       = require(USERDATA_TAG..".internal")
 
-local basePath = package.searchpath(USERDATA_TAG, package.path)
-if basePath then
-    basePath = basePath:match("^(.+)/init.lua$")
-    if require"hs.fs".attributes(basePath .. "/docs.json") then
-        require"hs.doc".registerJSONFile(basePath .. "/docs.json")
-    end
-end
+-- local basePath = package.searchpath(USERDATA_TAG, package.path)
+-- if basePath then
+--     basePath = basePath:match("^(.+)/init.lua$")
+--     if require"hs.fs".attributes(basePath .. "/docs.json") then
+--         require"hs.doc".registerJSONFile(basePath .. "/docs.json")
+--     end
+-- end
 
 local log  = require("hs.logger").new(USERDATA_TAG, require"hs.settings".get(USERDATA_TAG .. ".logLevel") or "warning")
 module.log = log
@@ -64,7 +64,7 @@ module.directions              = ls.makeConstantsTable(module.directions)
 
 module.observer.notifications  = ls.makeConstantsTable(module.observer.notifications)
 
---- hs._asm.axuielement.systemElementAtPosition(x, y | { x, y }) -> axuielementObject
+--- hs.axuielement.systemElementAtPosition(x, y | { x, y }) -> axuielementObject
 --- Constructor
 --- Returns the accessibility object at the specified position in top-left relative screen coordinates.
 ---
@@ -76,7 +76,7 @@ module.observer.notifications  = ls.makeConstantsTable(module.observer.notificat
 ---  * an axuielementObject for the object at the specified coordinates, or nil if no object could be identified.
 ---
 --- Notes:
----  * See also [hs._asm.axuielement:elementAtPosition](#elementAtPosition) -- this function is a shortcut for `hs._asm.axuielement.systemWideElement():elementAtPosition(...)`.
+---  * See also [hs.axuielement:elementAtPosition](#elementAtPosition) -- this function is a shortcut for `hs.axuielement.systemWideElement():elementAtPosition(...)`.
 ---
 ---  * This function does hit-testing based on window z-order (that is, layering). If one window is on top of another window, the returned accessibility object comes from whichever window is topmost at the specified location.
 module.systemElementAtPosition = function(...)
@@ -206,7 +206,7 @@ objectMT.__len = function(self)
     end
 end
 
---- hs._asm.axuielement:dynamicMethods([keyValueTable]) -> table
+--- hs.axuielement:dynamicMethods([keyValueTable]) -> table
 --- Method
 --- Returns a list of the dynamic methods (short cuts) created by this module for the object
 ---
@@ -231,7 +231,7 @@ objectMT.dynamicMethods = function(self, asKV)
     return ls.makeConstantsTable(results)
 end
 
---- hs._asm.axuielement:path() -> table
+--- hs.axuielement:path() -> table
 --- Method
 --- Returns a table of axuielements tracing this object through its parent objects to the root for this element, most likely an application object or the system wide object.
 ---
@@ -301,7 +301,7 @@ buildTreeHamster = function(self, prams, depth, withParents, seen)
     return self
 end
 
---- hs._asm.axuielement:buildTree(callback, [depth], [withParents]) -> buildTreeObject
+--- hs.axuielement:buildTree(callback, [depth], [withParents]) -> buildTreeObject
 --- Method
 --- Captures all of the available information for the accessibility object and its children and returns it in a table for inspection.
 ---
@@ -359,5 +359,4 @@ end
 
 -- Return Module Object --------------------------------------------------
 
-if module.types then module.types = ls.makeConstantsTable(module.types) end
 return module
