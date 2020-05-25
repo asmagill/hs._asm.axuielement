@@ -3,25 +3,20 @@ hs.axuielement
 
 This module allows you to access the accessibility objects of running applications, their windows, menus, and other user interface elements that support the OS X accessibility API.
 
-This is very much a work in progress, so bugs and comments are welcome.
-
 This module works through the use of axuielementObjects, which is the Hammerspoon representation for an accessibility object.  An accessibility object represents any object or component of an OS X application which can be manipulated through the OS X Accessibility API -- it can be an application, a window, a button, selected text, etc.  As such, it can only support those features and objects within an application that the application developers make available through the Accessibility API.
 
 The basic methods available to determine what attributes and actions are available for a given object are described in this reference documentation.  In addition, the module will dynamically add methods for the attributes and actions appropriate to the object, but these will differ between object roles and applications -- again we are limited by what the target application developers provide us.
 
 The dynamically generated methods will follow one of the following templates:
- * `object:*attribute*()`         - this will return the value for the specified attribute (see [hs.axuielement:attributeValue](#attributeValue) for the generic function this is based on).
- * `object:set*attribute*(value)` - this will set the specified attribute to the given value (see [hs.axuielement:setAttributeValue](#setAttributeValue) for the generic function this is based on).
- * `object:do*action*()`          - this request that the specified action is performed by the object (see [hs.axuielement:performAction](#performAction) for the generic function this is based on).
+ * `object:<attribute>()`         - this will return the value for the specified attribute (see [hs.axuielement:attributeValue](#attributeValue) for the generic function this is based on).
+ * `object:set<attribute>(value)` - this will set the specified attribute to the given value (see [hs.axuielement:setAttributeValue](#setAttributeValue) for the generic function this is based on).
+ * `object:do<action>()`          - this request that the specified action is performed by the object (see [hs.axuielement:performAction](#performAction) for the generic function this is based on).
 
-Where *action* and *attribute* can be the formal Accessibility version of the attribute or action name (a string usually prefixed with "AX") or without the "AX" prefix.  When the prefix is left off, the first letter of the action or attribute can be uppercase or lowercase.
+Where `<action>` and `<attribute>` can be the formal Accessibility version of the attribute or action name (a string usually prefixed with "AX") or without the "AX" prefix.  When the prefix is left off, the first letter of the action or attribute can be uppercase or lowercase.
 
 The module also dynamically supports treating the axuielementObject useradata as an array, to access it's children (i.e. `#object` will return a number, indicating the number of direct children the object has, and `object[1]` is equivalent to `object:children()[1]` or, more formally, `object:attributeValue("AXChildren")[1]`).
 
 You can also treat the axuielementObject userdata as a table of key-value pairs to generate a list of the dynamically generated functions: `for k, v in pairs(object) do print(k, v) end` (this is essentially what [hs.axuielement:dynamicMethods](#dynamicMethods) does).
-
-
-Limited support for parameterized attributes is provided, but is not yet complete.  This is expected to see updates in the future.
 
 ### Usage
 ~~~lua
@@ -34,7 +29,7 @@ axuielement = require("hs.axuielement")
 ##### Module Constructors
 * <a href="#applicationElement">axuielement.applicationElement(applicationObject) -> axuielementObject</a>
 * <a href="#applicationElementForPID">axuielement.applicationElementForPID(pid) -> axuielementObject</a>
-* <a href="#systemElementAtPosition">axuielement.systemElementAtPosition(x, y | { x, y }) -> axuielementObject</a>
+* <a href="#systemElementAtPosition">axuielement.systemElementAtPosition(x, y | pointTable) -> axuielementObject</a>
 * <a href="#systemWideElement">axuielement.systemWideElement() -> axuielementObject</a>
 * <a href="#windowElement">axuielement.windowElement(windowObject) -> axuielementObject</a>
 
@@ -50,7 +45,7 @@ axuielement = require("hs.axuielement")
 * <a href="#buildTree">axuielement:buildTree(callback, [depth], [withParents]) -> buildTreeObject</a>
 * <a href="#copy">axuielement:copy() -> axuielementObject</a>
 * <a href="#dynamicMethods">axuielement:dynamicMethods([keyValueTable]) -> table</a>
-* <a href="#elementAtPosition">axuielement:elementAtPosition(x, y | { x, y }) -> axuielementObject</a>
+* <a href="#elementAtPosition">axuielement:elementAtPosition(x, y | pointTable) -> axuielementObject</a>
 * <a href="#isAttributeSettable">axuielement:isAttributeSettable(attribute) -> boolean</a>
 * <a href="#isValid">axuielement:isValid() -> boolean</a>
 * <a href="#parameterizedAttributeNames">axuielement:parameterizedAttributeNames() -> table</a>
@@ -105,11 +100,11 @@ Returns:
 ~~~lua
 axuielement.systemElementAtPosition(x, y | { x, y }) -> axuielementObject
 ~~~
-Returns the accessibility object at the specified position in top-left relative screen coordinates.
+Returns the accessibility object at the specified position on the screen. The top-left corner of the primary screen is 0, 0.
 
 Parameters:
- * `x`, `y`   - the x and y coordinates of the screen location to test, provided as separate parameters
- * `{ x, y }` - the x and y coordinates of the screen location to test, provided as a point-table, like the one returned by `hs.mouse.getAbsolutePosition`.
+ * `x`, `y`     - the x and y coordinates of the screen location to test, provided as separate parameters
+ * `pointTable` - the x and y coordinates of the screen location to test, provided as a point-table, like the one returned by `hs.mouse.getAbsolutePosition`. A point-table is a table with key-value pairs for keys `x` and `y`.
 
 Returns:
  * an axuielementObject for the object at the specified coordinates, or nil if no object could be identified.
@@ -293,7 +288,7 @@ Returns:
    * `buildTreeObject:cancel()`    - will cancel the currently running search and invoke the callback with the partial results already collected. The `msg` parameter for the calback will be "** cancelled".
 
 Notes:
- * this method utilizes coroutines to keep Hammerspoon responsive, but can be slow to complete if you do not specifiy a depth or start from an element that has a lot of children or has children with many elements (e.g. the application element for a web browser).
+ * this method utilizes coroutines to keep Hammerspoon responsive, but can be slow to complete if you do not specifiy a depth or if you start from an element that has a lot of children or has children with many elements (e.g. the application element for a web browser).
 
  * The results of this method are not generally intended to be used in production programs; it is organized more for exploratory purposes when trying to understand how elements are related within a given application or to determine what elements might be worth targetting with more specific queries.
 
@@ -320,7 +315,7 @@ axuielement:dynamicMethods([keyValueTable]) -> table
 Returns a list of the dynamic methods (short cuts) created by this module for the object
 
 Parameters:
- * `keyValueTable` - an optional boolean, default false, indicating whether or not the result should be an array or a table of key-value pairs.
+ * `keyValueTable` - an optional boolean, default false, indicating whether or not the result should be an array (false) or a table of key-value pairs (true).
 
 Returns:
  * If `keyValueTable` is true, this method returns a table of key-value pairs with each key being the name of a dynamically generated method, and the value being the corresponding function.  Otherwise, this method returns an array of the dynamically generated method names.
@@ -334,11 +329,11 @@ Notes:
 ~~~lua
 axuielement:elementAtPosition(x, y | { x, y }) -> axuielementObject
 ~~~
-Returns the accessibility object at the specified position in top-left relative screen coordinates.
+Returns the accessibility object at the specified position on the screen. The top-left corner of the primary screen is 0, 0.
 
 Parameters:
- * `x`, `y`   - the x and y coordinates of the screen location to test, provided as separate parameters
- * `{ x, y }` - the x and y coordinates of the screen location to test, provided as a point-table, like the one returned by `hs.mouse.getAbsolutePosition`.
+ * `x`, `y`     - the x and y coordinates of the screen location to test, provided as separate parameters
+ * `pointTable` - the x and y coordinates of the screen location to test, provided as a point-table, like the one returned by `hs.mouse.getAbsolutePosition`. A point-table is a table with key-value pairs for keys `x` and `y`.
 
 Returns:
  * an axuielementObject for the object at the specified coordinates, or nil if no object could be identified.
@@ -378,6 +373,9 @@ Parameters:
 Returns:
  * a boolean value indicating whether or not the accessibility object is still valid.
 
+Notes:
+ * an accessibilityObject can become invalid for a variety of reasons, including but not limited to the element referred to no longer being available (e.g. an element referring to a window or one of its children that has been closed) or the application terminating.
+
 - - -
 
 <a name="parameterizedAttributeNames"></a>
@@ -406,9 +404,6 @@ Parameters:
 
 Returns:
  * the current value of the parameterized attribute, or nil if it has no value
-
-Notes:
- * Parameterized attribute support is still considered experimental and not fully supported yet.  Use with caution.
 
 - - -
 
@@ -494,7 +489,7 @@ Returns:
 
 Notes:
  * To change the global timeout affecting all queries on elements which do not have a specific timeout set, use this method on the systemwide element (see [hs.axuielement.systemWideElement](#systemWideElement).
- * Changing the timeout value for an axuielement object only changes the value for that specific element -- other axuieleement objects that may refere to the identical accessibiity item are not affected.
+ * Changing the timeout value for an axuielement object only changes the value for that specific element -- other axuieleement objects that may refer to the identical accessibiity item are not affected.
 
  * Setting the value to 0.0 resets the timeout -- if applied to the `systemWideElement`, the global default will be reset to its default value; if applied to another axuielement object, the timeout will be reset to the current global value as applied to the systemWideElement.
 
@@ -518,11 +513,20 @@ axuielement.attributes[]
 A table of common accessibility object attribute names, provided for reference. The names are grouped into the following subcategories (keys):
 
  * `application`
+ * `attributedStrings`
+ * `cell`
  * `dock`
  * `general`
+ * `grid`
+ * `layout`
+ * `level`
  * `matte`
  * `menu`
  * `misc`
+ * `obsolete`
+ * `outline`
+ * `ruler`
+ * `searchField`
  * `system`
  * `table`
  * `text`
@@ -530,7 +534,7 @@ A table of common accessibility object attribute names, provided for reference. 
 
 Notes:
  * this table is provided for reference only and is not intended to be comprehensive.
- * the category name indicates the type of accessibility object likely to contain the member elements.
+ * the category name suggests the type of accessibility object likely to contain the member elements.
 
 - - -
 
