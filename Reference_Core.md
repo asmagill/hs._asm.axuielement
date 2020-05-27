@@ -37,6 +37,7 @@ axuielement = require("hs.axuielement")
 * <a href="#actionDescription">axuielement:actionDescription(action) -> string</a>
 * <a href="#actionNames">axuielement:actionNames() -> table</a>
 * <a href="#allAttributeValues">axuielement:allAttributeValues([includeErrors]) -> table</a>
+* <a href="#allChildElements">axuielement:allChildElements(callback, [withParents]) -> childElementsObject</a>
 * <a href="#asHSApplication">axuielement:asHSApplication() -> hs.application object | nil</a>
 * <a href="#asHSWindow">axuielement:asHSWindow() -> hs.window object | nil</a>
 * <a href="#attributeNames">axuielement:attributeNames() -> table</a>
@@ -48,6 +49,7 @@ axuielement = require("hs.axuielement")
 * <a href="#elementAtPosition">axuielement:elementAtPosition(x, y | pointTable) -> axuielementObject</a>
 * <a href="#isAttributeSettable">axuielement:isAttributeSettable(attribute) -> boolean</a>
 * <a href="#isValid">axuielement:isValid() -> boolean</a>
+* <a href="#matchesCriteria">axuielement:matchesCriteria(criteria, [isPattern]) -> boolean</a>
 * <a href="#parameterizedAttributeNames">axuielement:parameterizedAttributeNames() -> table</a>
 * <a href="#parameterizedAttributeValue">axuielement:parameterizedAttributeValue(attribute, parameter) -> value</a>
 * <a href="#path">axuielement:path() -> table</a>
@@ -189,6 +191,26 @@ Parameters:
 
 Returns:
  * a table with key-value pairs corresponding to the attributes of the accessibility object.
+
+- - -
+
+<a name="allChildElements"></a>
+~~~lua
+axuielement:allChildElements(callback, [withParents]) -> childElementsObject
+~~~
+Query the accessibility object for all child accessibility objects (and their children...).
+
+Paramters:
+ * `callback`    - a required function which should expect two arguments: a `msg` string specifying how the search ended, and a table contiaining the discovered child elements. `msg` will be "completed" when the traversal has completed normally and will contain a string starting with "**" if it terminates early for some reason (see Returns: section)
+ * `withParents` - an optional boolean, default false, indicating that the parent of objects (and their children) should be collected as well.
+
+Returns:
+ * a childElementsObject which contains metamethods allowing you to check to see if the collection process has completed and cancel it early if desired:
+   * childElementsObject:isRunning() - will return true if the traversal is still ongoing, or false if it has completed or been cancelled
+   * childElementsObject:cancel() - will cancel the currently running search and invoke the callback with the partial results already collected. The msg parameter for the calback will be "** cancelled".
+
+Notes:
+ * this method utilizes coroutines to keep Hammerspoon responsive, but can be slow to complete If `withParent` is true or if you start from an element that has a lot of children or has children with many elements (e.g. the application element for a web browser).
 
 - - -
 
@@ -375,6 +397,32 @@ Returns:
 
 Notes:
  * an accessibilityObject can become invalid for a variety of reasons, including but not limited to the element referred to no longer being available (e.g. an element referring to a window or one of its children that has been closed) or the application terminating.
+
+- - -
+
+<a name="matchesCriteria"></a>
+~~~lua
+axuielement:matchesCriteria(criteria, [isPattern]) -> boolean
+~~~
+Returns true if the axuielementObject matches the specified criteria or false if it does not.
+
+Paramters:
+ * `criteria`  - the criteria to compare against the accessibility object
+ * `isPattern` - an optional boolean, default false, specifying whether or not the strings in the search criteria should be considered as Lua patterns (true) or as absolute string matches (false).
+
+Returns:
+ * true if the axuielementObject matches the criteria, false if it does not.
+
+Notes:
+ * if `isPattern` is specified and is true, all string comparisons are done with `string.match`.  See the Lua manual, section 6.4.1 (`help.lua._man._6_4_1` in the Hammerspoon console).
+ * the `criteria` parameter must be one of the following:
+   * a single string, specifying the AXRole value the axuielementObject's AXRole attribute must equal for the match to return true
+   * an array of strings, specifying a list of AXRoles for which the match should return true
+   * a table of key-value pairs specifying a more complex match criteria.  This table will be evaluated as follows:
+     * each key-value pair is treated as a separate test and the object *must* match as true for all tests
+     * each key is a string specifying an attribute to evaluate.  This attribute may be specified with its formal name (e.g. "AXRole") or the informal version (e.g. "role" or "Role").
+     * each value may be a string, a number, a boolean, or an axuielementObject userdata object, or an array (table) of such.  If the value is an array, then the test will match as true if the object matches any of the supplied values for the attribute specified by the key.
+       * Put another way: key-value pairs are "and'ed" together while the values for a specific key-value pair are "or'ed" together.
 
 - - -
 

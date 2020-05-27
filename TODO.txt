@@ -5,3 +5,9 @@ TODO: * Notifications/Observers?
       * revisit hs.uielement merger -- not happening in near term; uielement is being cleaned up and provides a simpler, safer interface to the basics; this module is for those who need/want more.
 
         retest examples given
+
+
+        reconsider and/or reimplement
+            hs.axuielement:elementSearch
+            hs.axuielement:searchPath
+            hs.axuielement:next
