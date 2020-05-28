@@ -8,9 +8,12 @@ This module works through the use of axuielementObjects, which is the Hammerspoo
 The basic methods available to determine what attributes and actions are available for a given object are described in this reference documentation.  In addition, the module will dynamically add methods for the attributes and actions appropriate to the object, but these will differ between object roles and applications -- again we are limited by what the target application developers provide us.
 
 The dynamically generated methods will follow one of the following templates:
- * `object:<attribute>()`         - this will return the value for the specified attribute (see [hs.axuielement:attributeValue](#attributeValue) for the generic function this is based on).
- * `object:set<attribute>(value)` - this will set the specified attribute to the given value (see [hs.axuielement:setAttributeValue](#setAttributeValue) for the generic function this is based on).
- * `object:do<action>()`          - this request that the specified action is performed by the object (see [hs.axuielement:performAction](#performAction) for the generic function this is based on).
+ * `object:<attribute>()`            - this will return the value for the specified attribute (see [hs.axuielement:attributeValue](#attributeValue) for the generic function this is based on). If the element does not have this specific attribute, an error will be generated.
+ * `object("<attribute>")`           - this will return the value for the specified attribute. Returns nil if the element does not have this specific attribute instead of generating an error.
+ * `object:set<attribute>(value)`    - this will set the specified attribute to the given value (see [hs.axuielement:setAttributeValue](#setAttributeValue) for the generic function this is based on). If the element does not have this specific attribute or if it is not settable, an error will be generated.
+ * `object("set<attribute>", value)` - this will set the specified attribute to the given value. If the element does not have this specific attribute or if it is not settable, an error will be generated.
+ * `object:do<action>()`             - this request that the specified action is performed by the object (see [hs.axuielement:performAction](#performAction) for the generic function this is based on). If the element does not respond to this action, an error will be generated.
+ * `object("do<action>")`            - this request that the specified action is performed by the object. If the element does not respond to this action, an error will be generated.
 
 Where `<action>` and `<attribute>` can be the formal Accessibility version of the attribute or action name (a string usually prefixed with "AX") or without the "AX" prefix.  When the prefix is left off, the first letter of the action or attribute can be uppercase or lowercase.
 
@@ -47,6 +50,7 @@ axuielement = require("hs.axuielement")
 * <a href="#copy">axuielement:copy() -> axuielementObject</a>
 * <a href="#dynamicMethods">axuielement:dynamicMethods([keyValueTable]) -> table</a>
 * <a href="#elementAtPosition">axuielement:elementAtPosition(x, y | pointTable) -> axuielementObject</a>
+* <a href="#elementSearch">axuielement:elementSearch(callback, [criteria], [namedModifiers]) -> elementSearchObject</a>
 * <a href="#isAttributeSettable">axuielement:isAttributeSettable(attribute) -> boolean</a>
 * <a href="#isValid">axuielement:isValid() -> boolean</a>
 * <a href="#matchesCriteria">axuielement:matchesCriteria(criteria, [isPattern]) -> boolean</a>
@@ -196,21 +200,19 @@ Returns:
 
 <a name="allChildElements"></a>
 ~~~lua
-axuielement:allChildElements(callback, [withParents]) -> childElementsObject
+axuielement:allChildElements(callback, [withParents]) -> elementSearchObject
 ~~~
 Query the accessibility object for all child accessibility objects (and their children...).
 
 Paramters:
- * `callback`    - a required function which should expect two arguments: a `msg` string specifying how the search ended, and a table contiaining the discovered child elements. `msg` will be "completed" when the traversal has completed normally and will contain a string starting with "**" if it terminates early for some reason (see Returns: section)
+ * `callback`    - a required function which should expect two arguments: a `msg` string specifying how the search ended, and a table containing the discovered child elements. `msg` will be "completed" when the traversal has completed normally and will contain a string starting with "**" if it terminates early for some reason (see Notes: section for more information)
  * `withParents` - an optional boolean, default false, indicating that the parent of objects (and their children) should be collected as well.
 
 Returns:
- * a childElementsObject which contains metamethods allowing you to check to see if the collection process has completed and cancel it early if desired:
-   * childElementsObject:isRunning() - will return true if the traversal is still ongoing, or false if it has completed or been cancelled
-   * childElementsObject:cancel() - will cancel the currently running search and invoke the callback with the partial results already collected. The msg parameter for the calback will be "** cancelled".
+ * an elementSearchObject as described in [hs.axuielement:elementSearch](#elementSearch)
 
 Notes:
- * this method utilizes coroutines to keep Hammerspoon responsive, but can be slow to complete If `withParent` is true or if you start from an element that has a lot of children or has children with many elements (e.g. the application element for a web browser).
+ * This method is syntactic sugar for `hs.axuielement:elementSearch(callback, { [includeParents = withParents] })`. Please refer to [hs.axuielement:elementSearch](#elementSearch) for details about the returned object and callback arguments.
 
 - - -
 
@@ -295,24 +297,22 @@ Returns:
 
 <a name="buildTree"></a>
 ~~~lua
-axuielement:buildTree(callback, [depth], [withParents]) -> buildTreeObject
+axuielement:buildTree(callback, [depth], [withParents]) -> elementSearchObject
 ~~~
 Captures all of the available information for the accessibility object and its children and returns it in a table for inspection.
 
 Parameters:
- * `callback` - a required function which should expect two arguments: a `msg` string specifying how the search ended, and a table contiaining the recorded information. `msg` will be "completed" when the search has completed normally (or reached the specified depth) and will contain a string starting with "**" if it terminates early for some reason (see Returns: section)
- * `depth`    - an optional integer, default `math.huge`, specifying the maximum depth from the intial accessibility object that should be visited to identify child elements and their attributes.
+ * `callback` - a required function which should expect two arguments: a `msg` string specifying how the search ended, and a table containing the recorded information. `msg` will be "completed" when the search has completed normally (or reached the specified depth) and will contain a string starting with "**" if it terminates early for some reason (see Notes: section for more information)
+ * `depth`    - an optional integer, default `math.huge`, specifying the maximum depth from the initial accessibility object that should be visited to identify child elements and their attributes.
  * `withParents` - an optional boolean, default false, specifying whether or not an element's (or child's) attributes for `AXParent` and `AXTopLevelUIElement` should also be visited when identifying additional elements to include in the results table.
 
 Returns:
- * a `buildTreeObject` which contains metamethods allowing you to check to see if the build process has completed and cancel it early if desired:
-   * `buildTreeObject:isRunning()` - will return true if the traversal is still ongoing, or false if it has completed or been cancelled
-   * `buildTreeObject:cancel()`    - will cancel the currently running search and invoke the callback with the partial results already collected. The `msg` parameter for the calback will be "** cancelled".
+ * an elementSearchObject as described in [hs.axuielement:elementSearch](#elementSearch)
 
 Notes:
- * this method utilizes coroutines to keep Hammerspoon responsive, but can be slow to complete if you do not specifiy a depth or if you start from an element that has a lot of children or has children with many elements (e.g. the application element for a web browser).
+ * The format of the `results` table passed to the callback for this method is primarily for debugging and exploratory purposes and may not be arranged for easy programatic evaluation.
 
- * The results of this method are not generally intended to be used in production programs; it is organized more for exploratory purposes when trying to understand how elements are related within a given application or to determine what elements might be worth targetting with more specific queries.
+ * This method is syntactic sugar for `hs.axuielement:elementSearch(callback, { objectOnly = false, asTree = true, [maxDepth = depth], [includeParents = withParents] })`. Please refer to [hs.axuielement:elementSearch](#elementSearch) for details about the returned object and callback arguments.
 
 - - -
 
@@ -366,6 +366,40 @@ Notes:
  * This function does hit-testing based on window z-order (that is, layering). If one window is on top of another window, the returned accessibility object comes from whichever window is topmost at the specified location.
  * If this method is called on an axuielementObject representing an application, the search is restricted to the application.
  * If this method is called on an axuielementObject representing the system-wide element, the search is not restricted to any particular application.  See [hs.axuielement.systemElementAtPosition](#systemElementAtPosition).
+
+- - -
+
+<a name="elementSearch"></a>
+~~~lua
+axuielement:elementSearch(callback, [criteria], [namedModifiers]) -> elementSearchObject
+~~~
+Search for and generate a table of the accessibility elements for the attributes and children of this object based on the specified criteria.
+
+Parameters:
+ * `callback`       - a required function which will receive the results of this search. The callback should expect two arguments and return none. The arguments to the callback function will be `msg`, a string specifying how the search ended and `results`, a table containing the requested results. `msg` will be "completed" if the search completes normally, or a string starting with "**" if it is terminated early (see Returns: and Notes: for more details).
+ * `matchCriteria`  - an optional table or string which will be passed to [hs.axuielement:matchesCriteria](#matchesCriteria) to determine if the discovered element should be included in the final result set. This criteria does not prune the search, it just determines if the element will be included in the results.
+ * `namedModifiers` - an optional table specifying key-value pairs that further modify or control the search. This table may contain 0 or more of the following keys:
+   * `isPattern`      - a boolean, default false, specifying whether or not all string values in `criteria` should be evaluated as patterns (true) or as literal strings to be matched (false). This value is passed to [hs.axuielement:matchesCriteria](#matchesCriteria) when `matchCriteria` is specified and has no effect otherwise.
+   * `includeParents` - a boolean, default false, specifying whether or not parent attributes (`AXParent` and `AXTopLevelUIElement`) should be examined during the search. Note that in most cases, setting this value to true will end up traversing the entire Accessibility structure for the target application and may significantly slow down the search.
+   * `maxDepth`       - an optional integer, default `math.huge`, specifying the maximum number of steps from the initial accessibility element the search should visit. If you know that your desired element(s) are relatively close to your starting element, setting this to a lower value can significantly speed up the search.
+   * `objectOnly`     - an optional boolean, default true, specifying whether each result in the final table will be the accessibility element discovered (true) or a table containing details about the element include the attribute names, actions, etc. for the element (false). This latter format is primarily for debugging and exploratory purposes and may not be arranged for easy programatic evaluation.
+   * `asTree`         - an optional boolean, default false, and is ignored if `criteria` is specified and non-empty or `objectOnly` is true. This modifier specifies whether the search results should return as an array table of tables containing each element's details (false) or as a tree where in which the root node details are the key-value pairs of the returned table and child elements are likewise described in subtables attached to the attribute name they belong to (true). This format is primarily for debugging and exploratory purposes and may not be arranged for easy programatic evaluation.
+
+Returns:
+ * an elementSearchObject which contains metamethods allowing you to check to see if the process has completed and cancel it early if desired. The methods include:
+   * `elementSearchObject:cancel([reason])` - cancels the current search and invokes the callback with the partial results already collected. If you specify `reason`, the `msg` parameter for the callback will be `** <reason>`; otherwise it will be "** cancelled".
+   * `elementSearchObject:isRunning()`      - returns true if the search is still ongoing or false if it has completed or been cancelled
+   * `elementSearchObject:matched()`        - returns an integer specifying the number of elements which have already been found that meet the specified criteria.
+   * `elementSearchObject:visited()`        - returns an integer specifying the number of elements which have been examined during the search so far.
+   * `elementSearchObject:runtime()`        - returns an integer specifying the number of seconds since this search was started. Note that this is *not* an accurate measure of how much time has been spent *specifically* in the search because it will be greatly affected by how much other activity is occurring within Hammerspoon and on the users computer. Once the callback has been invoked, this will return the total time in seconds between when the search began and when it completed.
+
+Notes:
+ * This method utilizes coroutines to keep Hammerspoon responsive, but may be slow to complete if `includeParents` is true, if you do not specify `maxDepth`, or if you start from an element that has a lot of children or has children with many elements (e.g. the application element for a web browser). This is dependent entirely upon how many active accessibility elements the target application defines and where you begin your search and cannot reliably be determined up front, so you may need to experiment to find the best balance for your specific requirements.
+
+* [hs.axuielement:allChildElements](#allChildElements) is syntactic sugar for `hs.axuielement:elementSearch(callback, { [includeParents = withParents] })`
+* [hs.axuielement:buildTree](#buildTree) is syntactic sugar for `hs.axuielement:elementSearch(callback, { objectOnly = false, asTree = true, [maxDepth = depth], [includeParents = withParents] })`
+
+* The search performed is a breadth-first search, so in general earlier elements in the results table will be "closer" in the Accessibility hierarchy to the starting point than later elements.
 
 - - -
 

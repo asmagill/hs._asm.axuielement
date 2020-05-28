@@ -55,6 +55,8 @@ As always, whichever method you chose, if you are updating from an earlier versi
 * [hs.axuielement](Reference_Core.md)
 * [hs.axuielement.observer](Reference_Observers.md)
 * ~~[Some examples](Queries.md)~~ -- uses temporarily disabled methods
+  * [Examples with the Dock](examples/dockStuff.lua) has been upgraded to work with the latest version
+  * [Element Highlighter](examples/axtypeMarker.lua) has been upgraded to work with the latest version
 * [TODO](TODO.txt)
 
 - - -
