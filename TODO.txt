@@ -8,6 +8,5 @@ TODO: * Notifications/Observers?
 
 
         reconsider and/or reimplement
-            hs.axuielement:elementSearch
             hs.axuielement:searchPath
             hs.axuielement:next
