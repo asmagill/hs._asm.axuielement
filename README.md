@@ -5,7 +5,35 @@ This is being integrated into the core Hammerspoon application. This repository 
 
 Version 0.7.6 will be the last version that installs as `hs._asm.axuielement`. Starting with version `1.0`, this module now installs itself as `hs.axuielement`.
 
-Functionally, 1.0 is equivalent to 0.7.6, however. This will likely change in the future as I test out the additions and return of functionality currently planned, assuming test versions are set up here for distribution before finally making it into core.
+Version 1.0.2+ has experimental `AXTextMarker` and `AXTextMarkerRange` support -- properties with these values can now be viewed but as the exact nature of the binary data is still unclear, editing them is untested. This is still being investigated.
+
+For now, a value of `AXTextMarker` will be returned as a table similar to:
+~~~lua
+  AXStartTextMarker = {
+    __AXTypeHelper = "AXTextMarker",
+    bytes = "¿∅∅∅∅∅∅∅¿\b¿=¿∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅¿∅∅∅∅∅∅∅",
+    length = 40
+  }
+~~~
+
+and a value of `AXTextMarkerRange` will be returned as a table similar to:
+~~~lua
+  AXSelectedTextMarkerRange = {
+    __AXTypeHelper = "AXTextMarkerRange",
+    endMarker = {
+      __AXTypeHelper = "AXTextMarker",
+      bytes = "¿¿∅∅∅∅∅∅PA¿=¿∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅¿∅∅∅∅∅∅∅",
+      length = 40
+    },
+    startMarker = {
+      __AXTypeHelper = "AXTextMarker",
+      bytes = "¿¿∅∅∅∅∅∅PA¿=¿∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅¿∅∅∅∅∅∅∅",
+      length = 40
+    }
+  }
+~~~
+
+If you do attempt to edit them in your own experimentation, makre sure to keep the `__AXTypeHelper` key as that is how the parser knows to convert them into the appropriate object when setting the property.
 
 - - -
 
