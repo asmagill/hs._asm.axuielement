@@ -63,30 +63,6 @@ static int errorWrapper(lua_State *L, NSString *where, NSString *what, AXError e
 
 #pragma mark - Module Functions
 
-// static int axuielement_AXTextMarkerGetTypeID(lua_State *L) {
-//     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
-//     [skin checkArgs:LS_TBREAK | LS_TVARARG] ;
-//
-//     if (AXTextMarkerGetTypeID != NULL) {
-//         lua_pushinteger(L, (lua_Integer)AXTextMarkerGetTypeID()) ;
-//     } else {
-//         lua_pushnil(L) ;
-//     }
-//     return 1 ;
-// }
-//
-// static int axuielement_AXTextMarkerRangeGetTypeID(lua_State *L) {
-//     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
-//     [skin checkArgs:LS_TBREAK | LS_TVARARG] ;
-//
-//     if (AXTextMarkerRangeGetTypeID != NULL) {
-//         lua_pushinteger(L, (lua_Integer)AXTextMarkerRangeGetTypeID()) ;
-//     } else {
-//         lua_pushnil(L) ;
-//     }
-//     return 1 ;
-// }
-
 /// hs.axuielement.windowElement(windowObject) -> axuielementObject
 /// Constructor
 /// Returns the accessibility object for the window specified by the `hs.window` object.
@@ -1220,9 +1196,6 @@ static luaL_Reg moduleLib[] = {
     {"applicationElement",       axuielement_getApplicationElement},
     {"applicationElementForPID", axuielement_getApplicationElementForPID},
 
-//     {"textMarkerID",             axuielement_AXTextMarkerGetTypeID},
-//     {"textMarkerRangeID",        axuielement_AXTextMarkerRangeGetTypeID},
-
     {NULL,                       NULL}
 } ;
 
@@ -1239,7 +1212,8 @@ int luaopen_hs_axuielement_internal(lua_State* L) {
                                  metaFunctions:nil
                                objectFunctions:userdata_metaLib] ;
 
-    luaopen_hs_axuielement_observer(L) ; lua_setfield(L, -2, "observer") ;
+    luaopen_hs_axuielement_observer(L) ;     lua_setfield(L, -2, "observer") ;
+    luaopen_hs_axuielement_axtextmarker(L) ; lua_setfield(L, -2, "axtextmarker") ;
 
 // For reference, since the object __init wrapper in init.lua and the keys for elementSearch don't
 // actually use them in case the user wants to use an Application defined attribute or action not
