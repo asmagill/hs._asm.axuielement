@@ -469,7 +469,14 @@ local elementSearchHamsterBF = function(self, state)
     local seen    = setmetatable({ [self] = true }, {
                         __index = function(_self, key)
                             for k,v in pairs(_self) do
-                                if k == key then return v end
+                                if k == key then
+                                    -- speed up future searches. only works reliably if v is
+                                    -- table and future updates are to the table and not a
+                                    -- replacement of the table. pairs() will return each
+                                    -- copy, though, so its a trade off depending upon needs
+                                    rawset(_self, key, v)
+                                    return v
+                                end
                             end
                             return nil
                         end,
@@ -483,6 +490,8 @@ local elementSearchHamsterBF = function(self, state)
                             rawset(_self, key, value)
                         end
                     })
+    seen[self] = {} -- capture initial self
+
     local results = {}
 
     local criteria       = state.criteria
@@ -504,14 +513,13 @@ local elementSearchHamsterBF = function(self, state)
             state.visited = state.visited + 1
             if criteriaEmpty or element:matchesCriteria(criteria, isPattern) then
                 state.matched = state.matched + 1
-                local keeping = objectOnly and element or element:allAttributeValues() or {}
+                local keeping = objectOnly and element or element:allAttributeValues() or seen[element]
                 if not objectOnly then
+                    -- store the table of details so we can replace the axuielement objects in the final results for attributes and children with their details
                     keeping._element                 = element
                     keeping._actions                 = element:actionNames()
                     keeping._attributes              = element:attributeNames()
                     keeping._parameterizedAttributes = element:parameterizedAttributeNames()
-                    -- store the table of details so we can replace the axuielement objects in the final results for attributes and children with their details
-                    seen[element] = keeping
                 end
                 table.insert(results, keeping)
             end
@@ -520,7 +528,7 @@ local elementSearchHamsterBF = function(self, state)
             local children = element("children") or {}
             for _,v in ipairs(children) do
                 if not seen[v] then
-                    seen[v] = true
+                    seen[v] = {}
                     table.insert(nxtLvlQueue, v)
                 end
             end
@@ -529,7 +537,7 @@ local elementSearchHamsterBF = function(self, state)
                     local pElement = element(v)
                     if pElement then
                         if not seen[v] then
-                            seen[v] = true
+                            seen[v] = {}
                             table.insert(nxtLvlQueue, v)
                         end
                     end
@@ -545,7 +553,7 @@ local elementSearchHamsterBF = function(self, state)
         local deTableValue
         deTableValue = function(val)
             if getmetatable(val) == objectMT then
-                return seen[val] or val
+                return next(seen[val]) and seen[val] or val
             elseif type(val) == "table" then
                 for k, v in pairs(val) do val[k] = deTableValue(v) end
             end
