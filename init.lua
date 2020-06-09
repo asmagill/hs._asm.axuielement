@@ -283,7 +283,7 @@ end
 ---    * a table of key-value pairs specifying a more complex match criteria.  This table will be evaluated as follows:
 ---      * each key-value pair is treated as a separate test and the object *must* match as true for all tests
 ---      * each key is a string specifying an attribute to evaluate.  This attribute may be specified with its formal name (e.g. "AXRole") or the informal version (e.g. "role" or "Role").
----      * each value may be a string, a number, a boolean, or an axuielementObject userdata object, or an array (table) of such.  If the value is an array, then the test will match as true if the object matches any of the supplied values for the attribute specified by the key.
+---      * each value may be a string, a number, a boolean, or an axuielementObject userdata object, or an array (table) of such.  If the value is an array, then the test will match as true if the object matches any of the supplied values for the attribute specified by the key. To specify a value of `nil`, use the boolean `false`.
 ---        * Put another way: key-value pairs are "and'ed" together while the values for a specific key-value pair are "or'ed" together.
 ---
 ---  * This method is used by [hs.axuielement:elementSearch](#elementSearch) when a criteria is specified.
@@ -297,6 +297,7 @@ objectMT.matchesCriteria = function(self, criteria, isPattern)
         for k, v in pairs(criteria) do
             local formalName = k:match("^AX[%w_]+$") and k or "AX"..k:sub(1,1):upper()..k:sub(2)
             local result = values[formalName]
+            if result == nil then result = false end -- nil can't be a value in the criteria, so match it to false
             if type(v) ~= "table" then v = { v } end
             local partialAnswer = false
             for _, v2 in ipairs(v) do
@@ -334,12 +335,12 @@ end
 --- Notes:
 --- * The format of the `results` table passed to the callback for this method is primarily for debugging and exploratory purposes and may not be arranged for easy programatic evaluation.
 ---
----  * This method is syntactic sugar for `hs.axuielement:elementSearch(callback, { objectOnly = false, asTree = true, [maxDepth = depth], [includeParents = withParents] })`. Please refer to [hs.axuielement:elementSearch](#elementSearch) for details about the returned object and callback arguments.
+---  * This method is syntactic sugar for `hs.axuielement:elementSearch(callback, { objectOnly = false, asTree = true, [depth = depth], [includeParents = withParents] })`. Please refer to [hs.axuielement:elementSearch](#elementSearch) for details about the returned object and callback arguments.
 objectMT.buildTree = function(self, callback, depth, withParents)
     return self:elementSearch(callback, nil, {
         objectOnly     = false,
         asTree         = true,
-        maxDepth       = depth or math.huge,
+        depth          = depth or math.huge,
         includeParents = withParents and true or false,
     })
 end
@@ -363,20 +364,21 @@ end
 
 
 -- used for metamethods on hs.axuielement:elementSearch results
-local elementSearchResultsMT = {}
-elementSearchResultsMT.__index = elementSearchResultsMT
+local elementFilterHamster = function(self, elementFilterObject)
+    local efoMT = getmetatable(elementFilterObject)
+    local state = efoMT._state
 
-local elementFilterHamster = function(self, state)
     local criteria    = state.criteria
     local isPattern   = state.isPattern
     local objectsOnly = state.objectsOnly
-    local results = {}
+
+    local results     = elementFilterObject
 
     local criteriaEmpty = not(next(criteria) and true or false)
 
     for _,v in ipairs(self) do
         if state.cancel then break end
-        if coroutine.isyieldable() then coroutine.applicationYield() end -- luacheck: ignore
+        if state.callback and coroutine.isyieldable() then coroutine.applicationYield() end -- luacheck: ignore
 
         state.visited = state.visited + 1
         local addThis = criteriaEmpty or (objectsOnly and v or v._element):matchesCriteria(criteria, isPattern)
@@ -385,10 +387,13 @@ local elementFilterHamster = function(self, state)
             table.insert(results, v)
         end
     end
-    return setmetatable(results, elementSearchResultsMT)
+    if not state.cancel then state.msg = "completed" end
+
+    return results
 end
 
-elementSearchResultsMT.filter = function(self, criteria, isPattern, callback)
+local elementSearchResultsFilter
+elementSearchResultsFilter = function(self, criteria, isPattern, callback)
     if type(criteria) == "function" or (getmetatable(criteria) or {}).__call then
         criteria, isPattern, callback = {}, false, criteria
     end
@@ -405,7 +410,7 @@ elementSearchResultsMT.filter = function(self, criteria, isPattern, callback)
 
     local state = {
         cancel      = false,
-        callback    = callback, -- may add partial updates at some point
+        callback    = callback,
         criteria    = criteria,
         isPattern   = isPattern,
         objectsOnly = self[1] and (getmetatable(self[1]) == objectMT),
@@ -415,118 +420,139 @@ elementSearchResultsMT.filter = function(self, criteria, isPattern, callback)
         finished    = nil,
     }
 
+    local elementFilterObject = setmetatable({}, {
+        _state = state,
+        __index = {
+            cancel = function(_, msg)
+                state.cancel = true
+                if msg then
+                    state.msg = "** " .. tostring(msg)
+                else
+                    state.msg = "** cancelled"
+                end
+            end,
+            isRunning = function(_)
+                return not state.msg
+            end,
+            matched = function(_)
+                return state.matched
+            end,
+            visited = function(_)
+                return state.visited
+            end,
+            runTime = function(_)
+                return state.finished or (os.time() - state.started)
+            end,
+            filter = function(_, ...)
+                local efoMT = getmetatable(_)
+                if not callback or efoMT._state.finished then
+                    return elementSearchResultsFilter(_, ...)
+                else
+                    error("new filter cannot be applied while existing filtering is in progress", 2)
+                end
+            end,
+        },
+        __tostring = function(_)
+            return USERDATA_TAG .. ":elementSearchObject " .. tostring(self):match(USERDATA_TAG .. ": (.+)$")
+        end,
+-- For now, not requiring that they capture this value to prevent collection.
+--         __gc = function(_)
+--             if not state.finished then
+--                 _:cancel("gc on elementSearchObject object")
+--             end
+--         end,
+    })
+
+
     if callback then
         local filterCoroutine
         filterCoroutine = coroutine.wrap(function()
-            local results = elementFilterHamster(self, state)
+            local results = elementFilterHamster(self, elementFilterObject)
             state.finished = os.time() - state.started
             callback(state.msg or "completed", results)
             filterCoroutine = nil -- ensure garbage collection doesn't happen until after we're done
         end)
         filterCoroutine()
 
-        return setmetatable({}, {
-            __index = {
-                cancel = function(_, msg)
-                    state.cancel = true
-                    if msg then
-                        state.msg = "** " .. tostring(msg)
-                    else
-                        state.msg = "** cancelled"
-                    end
-                end,
-                isRunning = function(_)
-                    return not state.msg
-                end,
-                matched = function(_)
-                    return state.matched
-                end,
-                visited = function(_)
-                    return state.visited
-                end,
-                runTime = function(_)
-                    return state.finished or (os.time() - state.started)
-                end,
-            },
-            __tostring = function(_)
-                return USERDATA_TAG .. ":elementSearchObject " .. tostring(self):match(USERDATA_TAG .. ": (.+)$")
-            end,
-    -- For now, not requiring that they capture this value to prevent collection.
-    --         __gc = function(_)
-    --             _:cancel("gc on elementSearchObject object")
-    --         end,
-        })
+        return elementFilterObject
     else
-        return elementFilterHamster(self, state)
+        return elementFilterHamster(self, elementFilterObject)
     end
 end
 
 -- used by hs.axuielement:elementSearch to do the heavy lifting. The search performed is a breadth first search.
-local elementSearchHamsterBF = function(self, state)
-    local queue   = { self }
-    local depth   = 0
-    -- allows use of userdata as key in hash table even though different userdata can refer to same object
-    local seen    = setmetatable({ [self] = true }, {
-                        __index = function(_self, key)
-                            for k,v in pairs(_self) do
-                                if k == key then
-                                    -- speed up future searches. only works reliably if v is
-                                    -- table and future updates are to the table and not a
-                                    -- replacement of the table. pairs() will return each
-                                    -- copy, though, so its a trade off depending upon needs
-                                    rawset(_self, key, v)
-                                    return v
-                                end
-                            end
-                            return nil
-                        end,
-                        __newindex = function(_self, key, value)
-                            for k,_ in pairs(_self) do
-                                if k == key then
-                                    rawset(_self, k, value)
-                                    return
-                                end
-                            end
-                            rawset(_self, key, value)
-                        end
-                    })
-    seen[self] = {} -- capture initial self
+local elementSearchHamsterBF = function(elementSearchObject)
+    local esoMT = getmetatable(elementSearchObject)
+    local self, state = esoMT._self, esoMT._state
 
-    local results = {}
+    local queue   = esoMT._queue or { self }
+    local depth   = esoMT._depth or 0
+    -- allows use of userdata as key in hash table even though different userdata can refer to same object
+    local seen    = esoMT._seen or setmetatable({ [self] = {} }, { -- capture initial self
+                                      __index = function(_self, key)
+                                          for k,v in pairs(_self) do
+                                              if k == key then
+                                                  -- speed up future searches. only works reliably if v is
+                                                  -- table and future updates are to the table and not a
+                                                  -- replacement of the table. pairs() will return each
+                                                  -- copy, though, so its a trade off depending upon needs
+                                                  rawset(_self, key, v)
+                                                  return v
+                                              end
+                                          end
+                                          return nil
+                                      end,
+                                      __newindex = function(_self, key, value)
+                                          for k,_ in pairs(_self) do
+                                              if k == key then
+                                                  rawset(_self, k, value)
+                                                  return
+                                              end
+                                          end
+                                          rawset(_self, key, value)
+                                      end
+                                  })
+
+    local results = elementSearchObject
 
     local criteria       = state.criteria
     local isPattern      = state.namedMods.isPattern
     local includeParents = state.namedMods.includeParents
-    local maxDepth       = state.namedMods.maxDepth
+    local maxDepth       = state.namedMods.depth
     local objectOnly     = state.namedMods.objectOnly
     local asTree         = state.namedMods.asTree
 
     local criteriaEmpty = not(next(criteria) and true or false)
 
-    while #queue > 0 do
-        if state.cancel or maxDepth < depth then break end
+    local count, maxCount = 0, state.namedMods.count
 
-        if coroutine.isyieldable() then coroutine.applicationYield() end -- luacheck: ignore
+    while #queue > 0 do
+        if state.cancel or maxDepth < depth or count == maxCount then break end
+
+        if state.callback and coroutine.isyieldable() then coroutine.applicationYield() end -- luacheck: ignore
 
         local element = table.remove(queue, 1)
         if getmetatable(element) == objectMT then
             state.visited = state.visited + 1
             if criteriaEmpty or element:matchesCriteria(criteria, isPattern) then
                 state.matched = state.matched + 1
-                local keeping = objectOnly and element or element:allAttributeValues() or seen[element]
+                local keeping = objectOnly and element or seen[element]
                 if not objectOnly then
                     -- store the table of details so we can replace the axuielement objects in the final results for attributes and children with their details
+                    for k,v in pairs(element:allAttributeValues()) do keeping[k] = v end
                     keeping._element                 = element
                     keeping._actions                 = element:actionNames()
                     keeping._attributes              = element:attributeNames()
                     keeping._parameterizedAttributes = element:parameterizedAttributeNames()
                 end
                 table.insert(results, keeping)
+                count = count + 1
             end
             if type(queue[#queue]) ~= "table" then table.insert(queue, {}) end
             local nxtLvlQueue = queue[#queue]
             local children = element("children") or {}
             for _,v in ipairs(children) do
+                if state.callback and coroutine.isyieldable() then coroutine.applicationYield() end -- luacheck: ignore
                 if not seen[v] then
                     seen[v] = {}
                     table.insert(nxtLvlQueue, v)
@@ -549,6 +575,14 @@ local elementSearchHamsterBF = function(self, state)
         end
     end
 
+    if not state.cancel then
+        state.msg = ((#queue == 0) or (maxDepth < depth)) and "completed" or "countReached"
+    end
+
+    esoMT._depth = depth
+    esoMT._queue = queue
+    esoMT._seen  = seen
+
     if not objectOnly then -- convert values that are axuielements to their table stored in `seen`
         local deTableValue
         deTableValue = function(val)
@@ -562,7 +596,7 @@ local elementSearchHamsterBF = function(self, state)
 
         for _, element in ipairs(results) do
             for key, value in pairs(element) do
-                if coroutine.isyieldable() then coroutine.applicationYield() end -- luacheck: ignore
+                if state.callback and coroutine.isyieldable() then coroutine.applicationYield() end -- luacheck: ignore
 
                 if not key:match("^_") then -- skip our collections of actions, etc. and the element itself
                     element[key] = deTableValue(value)
@@ -574,11 +608,7 @@ local elementSearchHamsterBF = function(self, state)
     -- asTree is only valid (and in fact only works) if we captured all elements from the starting node and recorded their details
     if asTree and criteriaEmpty and not objectOnly then results = results[1] end
 
-    if not asTree then
-        return setmetatable(results, elementSearchResultsMT)
-    else
-        return results
-    end
+    return results, count
 end
 
 --- hs.axuielement:elementSearch(callback, [criteria], [namedModifiers]) -> elementSearchObject
@@ -586,47 +616,56 @@ end
 --- Search for and generate a table of the accessibility elements for the attributes and children of this object based on the specified criteria.
 ---
 --- Parameters:
----  * `callback`       - a required function which will receive the results of this search. The callback should expect two arguments and return none. The arguments to the callback function will be `msg`, a string specifying how the search ended and `results`, a table containing the requested results. `msg` will be "completed" if the search completes normally, or a string starting with "**" if it is terminated early (see Returns: and Notes: for more details).
+---  * `callback`       - a (usually) required function which will receive the results of this search. The callback should expect three arguments and return none. The arguments to the callback function will be `msg`, a string specifying how the search ended and `results`, the elementSearchObject containing the requested results, and the number of items added to the results (see `count` in `namedModifiers`). `msg` will be "completed" if the search completes normally, or a string starting with "**" if it is terminated early (see Returns: and Notes: for more details).
 ---  * `criteria`       - an optional table or string which will be passed to [hs.axuielement:matchesCriteria](#matchesCriteria) to determine if the discovered element should be included in the final result set. This criteria does not prune the search, it just determines if the element will be included in the results.
 ---  * `namedModifiers` - an optional table specifying key-value pairs that further modify or control the search. This table may contain 0 or more of the following keys:
+---    * `count`          - an optional integer, default `math.huge`, specifying the maximum number of matches to collect before ending the search and invoking the callback. You can continue the search to find additional elements by invoking `elementSearchObject:next()` (described below in the `Returns` section) on the return value of this method, or on the results argument passed to the callback.
+---    * `depth`          - an optional integer, default `math.huge`, specifying the maximum number of steps (children of children...) from the initial accessibility element the search should visit. If you know that your desired element(s) are relatively close to your starting element, setting this to a lower value can significantly speed up the search.
 ---    * `isPattern`      - a boolean, default false, specifying whether or not all string values in `criteria` should be evaluated as patterns (true) or as literal strings to be matched (false). This value is passed to [hs.axuielement:matchesCriteria](#matchesCriteria) when `criteria` is specified and has no effect otherwise.
----    * `includeParents` - a boolean, default false, specifying whether or not parent attributes (`AXParent` and `AXTopLevelUIElement`) should be examined during the search. Note that in most cases, setting this value to true will end up traversing the entire Accessibility structure for the target application and may significantly slow down the search.
----    * `maxDepth`       - an optional integer, default `math.huge`, specifying the maximum number of steps from the initial accessibility element the search should visit. If you know that your desired element(s) are relatively close to your starting element, setting this to a lower value can significantly speed up the search.
----    * `objectOnly`     - an optional boolean, default true, specifying whether each result in the final table will be the accessibility element discovered (true) or a table containing details about the element include the attribute names, actions, etc. for the element (false). This latter format is primarily for debugging and exploratory purposes and may not be arranged for easy programatic evaluation.
----    * `asTree`         - an optional boolean, default false, and is ignored if `criteria` is specified and non-empty or `objectOnly` is true. This modifier specifies whether the search results should return as an array table of tables containing each element's details (false) or as a tree where in which the root node details are the key-value pairs of the returned table and child elements are likewise described in subtables attached to the attribute name they belong to (true). This format is primarily for debugging and exploratory purposes and may not be arranged for easy programatic evaluation.
----    * `noCallback`     - an optional boolean, default false, allowing you to specify nil as the callback when set to true. This feature requires setting this named argumennt to true and specifying the callback field as nil because starting a query from an element with a lot of descendants **WILL** block Hammerspoon and slow down the responsiveness of your computer (I've seen blocking for over 5 minutes in extreme cases) and should be used *only* when you know you are starting from close to the end of the element heirarchy. When this is true, this method returns just the results table. Ignored if `callback` is not also nil.
+---
+---    * The following are also recognized, but may impact the speed of the search, the responsiveness of Hammerspoon, or the format of the results in ways that limit further filtering and are not recommended except when you know that you require them:
+---      * `asTree`         - an optional boolean, default false, and ignored if `criteria` is specified and non-empty, `objectOnly` is true, or `count` is specified. This modifier specifies whether the search results should return as an array table of tables containing each element's details (false) or as a tree where in which the root node details are the key-value pairs of the returned table and child elements are likewise described in subtables attached to the attribute name they belong to (true). This format is primarily for debugging and exploratory purposes and may not be arranged for easy programatic evaluation.
+---      * `includeParents` - a boolean, default false, specifying whether or not parent attributes (`AXParent` and `AXTopLevelUIElement`) should be examined during the search. Note that in most cases, setting this value to true will end up traversing the entire Accessibility structure for the target application and may significantly slow down the search.
+---      * `noCallback`     - an optional boolean, default false, and ignored if `callback` is not also nil, allowing you to specify nil as the callback when set to true. This feature requires setting this named argumennt to true *and* specifying the callback field as nil because starting a query from an element with a lot of descendants **WILL** block Hammerspoon and slow down the responsiveness of your computer (I've seen blocking for over 5 minutes in extreme cases) and should be used *only* when you know you are starting from close to the end of the element heirarchy.
+---      * `objectOnly`     - an optional boolean, default true, specifying whether each result in the final table will be the accessibility element discovered (true) or a table containing details about the element include the attribute names, actions, etc. for the element (false). This latter format is primarily for debugging and exploratory purposes and may not be arranged for easy programatic evaluation.
 ---
 --- Returns:
 ---  * an elementSearchObject which contains metamethods allowing you to check to see if the process has completed and cancel it early if desired. The methods include:
 ---    * `elementSearchObject:cancel([reason])` - cancels the current search and invokes the callback with the partial results already collected. If you specify `reason`, the `msg` parameter for the callback will be `** <reason>`; otherwise it will be "** cancelled".
----    * `elementSearchObject:isRunning()`      - returns true if the search is still ongoing or false if it has completed or been cancelled
+---    * `elementSearchObject:isRunning()`      - returns true if the search is currently ongoing or false if it has completed or been cancelled.
 ---    * `elementSearchObject:matched()`        - returns an integer specifying the number of elements which have already been found that meet the specified criteria.
+---    * `elementSearchObject:runTime()`        - returns an integer specifying the number of seconds spent performing this search. Note that this is *not* an accurate measure of how much time a given search will always take because the time will be greatly affected by how much other activity is occurring within Hammerspoon and on the users computer. Resuming a cancelled search or a search which invoked the callback because it reached `count` items with the `next` method (descibed below) will cause this number to begin increasing again to provide a cumulative total of time spent performing the search; time between when the callback is invoked and the `next` method is invoked is not included.
 ---    * `elementSearchObject:visited()`        - returns an integer specifying the number of elements which have been examined during the search so far.
----    * `elementSearchObject:runTime()`        - returns an integer specifying the number of seconds since this search was started. Note that this is *not* an accurate measure of how much time has been spent *specifically* in the search because it will be greatly affected by how much other activity is occurring within Hammerspoon and on the users computer. Once the callback has been invoked, this will return the total time in seconds between when the search began and when it completed.
+---
+---    * If `asTree` is false or not specified, the following additional methods will be available:
+---      * `elementSearchObject:filter([criteria], [isPattern], [callback]) -> filterObject`
+---        * returns a new table containing elements in the search results that match the specified criteria.
+---          * `criteria`  - an optional table or string which will be passed to [hs.axuielement:matchesCriteria](#matchesCriteria) to determine if the element should be included in the filtered result set.
+---          * `isPattern` - an optional boolean, default false, specifying whether strings in the specified criteria should be treated as patterns (see [hs.axuielement:matchesCriteria](#matchesCriteria))
+---          * `callback`  - an optional callback which should expect two arguments and return none. If a callback is specified, the callback will receive two arguments, a msg indicating how the callback ended (the message format matches the style defined for this method) and the filterObject which contains the matching elements.
+---        * The filter object returned by this method and passed to the callback, if defined, will support the following methods as defined here: `cancel`, `filter`, `isRunning`, `matched`, `runTime`, and `visited`.
+---      * `elementSearchObject:next()` - if the search was cancelled or reached the count of matches specified, this method will continue the search where it left off. The elementSearchObject returned when the callback is next invoked will have up to `count` items added to the existing results (calls to `next` are cummulative for the total results captured in the elementSearchObject). The third ardument to the callback will be the number of items *added* to the search results, not the number of items *in* the search results.
 ---
 --- Notes:
----  * This method utilizes coroutines to keep Hammerspoon responsive, but may be slow to complete if `includeParents` is true, if you do not specify `maxDepth`, or if you start from an element that has a lot of children or has children with many elements (e.g. the application element for a web browser). This is dependent entirely upon how many active accessibility elements the target application defines and where you begin your search and cannot reliably be determined up front, so you may need to experiment to find the best balance for your specific requirements.
+---  * This method utilizes coroutines to keep Hammerspoon responsive, but may be slow to complete if `includeParents` is true, if you do not specify `depth`, or if you start from an element that has a lot of children or has children with many elements (e.g. the application element for a web browser). This is dependent entirely upon how many active accessibility elements the target application defines and where you begin your search and cannot reliably be determined up front, so you may need to experiment to find the best balance for your specific requirements.
 ---
 --- * The search performed is a breadth-first search, so in general earlier elements in the results table will be "closer" in the Accessibility hierarchy to the starting point than later elements.
 ---
---- * If `asTree` is false, the `results` table will be generated with metamethods allowing you to further filter the results by applying additional criteria. The following method is defined:
----   * `results:filter([criteria], [isPattern], [callback]) -> table`
----     * `criteria`  - an optional table or string which will be passed to [hs.axuielement:matchesCriteria](#matchesCriteria) to determine if the element should be included in the filtered result set.
----     * `isPattern` - an optional boolean, default false, specifying whether strings in the specified criteria should be treated as patterns (see [hs.axuielement:matchesCriteria](#matchesCriteria))
----     * `callback`  - an optional callback which should expect two arguments and return none. The arguments will be a message indicating how the filter terminated and the filtered results table. If this field is specified, the `filter` method will return a filterObject with the same metamethods as the `elementSearchObject` described above.
+--- * The `elementSearchObject` returned by this method and the results passed in as the second argument to the callback function are the same object -- you can use either one in your code depending upon which makes the most sense. Results that match the criteria are added to the `elementSearchObject` as they are found, so if you examine the object/table returned by this method and determine that you have located the element or elements you require before the callback has been invoked, you can safely invoke the cancel method to end the search early.
 ---
----   * By default, the filter method returns the filtered results table with the same metatable attached (fort further filtering). However, if your table is exceptionally large (for example if you used [hs.axuielement:allChildElements](#allChildElements) on an application like Safari), it may be better to use a callback here as well to keep Hammerspoon responsive.
+--- * If `objectsOnly` is specified as false, it may take some time after `cancel` is invoked for the mapping of element attribute tables to the child elements in the results set -- this is a by product of the need to iterate through the results to match up all of the instances of each element to it's attribute table.
 ---
 --- * [hs.axuielement:allChildElements](#allChildElements) is syntactic sugar for `hs.axuielement:elementSearch(callback, { [includeParents = withParents] })`
---- * [hs.axuielement:buildTree](#buildTree) is syntactic sugar for `hs.axuielement:elementSearch(callback, { objectOnly = false, asTree = true, [maxDepth = depth], [includeParents = withParents] })`
+--- * [hs.axuielement:buildTree](#buildTree) is syntactic sugar for `hs.axuielement:elementSearch(callback, { objectOnly = false, asTree = true, [depth = depth], [includeParents = withParents] })`
 objectMT.elementSearch = function(self, callback, criteria, namedModifiers)
     local namedModifierDefaults = {
         isPattern      = false,
         includeParents = false,
-        maxDepth       = math.huge,
+        depth          = math.huge,
         objectOnly     = true,
         asTree         = false,
         noCallback     = false,
+        count          = math.huge,
     }
 
     -- check to see if criteria left off and second arg is actually the namedModifiers table
@@ -646,6 +685,7 @@ objectMT.elementSearch = function(self, callback, criteria, namedModifiers)
 
     namedModifiers = namedModifiers or {}
     -- set defaults in namedModifiers for keys not provided
+    if namedModifiers.count then namedModifiers.asTree = false end
     for k,v in pairs(namedModifierDefaults) do
         if type(namedModifiers[k]) == "nil" then
             namedModifiers[k] = v
@@ -660,7 +700,7 @@ objectMT.elementSearch = function(self, callback, criteria, namedModifiers)
 
     local state = {
         cancel    = false,
-        callback  = callback, -- may add partial updates at some point
+        callback  = callback,
         criteria  = criteria,
         namedMods = namedModifiers,
         matched   = 0,
@@ -668,50 +708,90 @@ objectMT.elementSearch = function(self, callback, criteria, namedModifiers)
         started   = os.time(),
         finished  = nil,
     }
+    local elementSearchObject = setmetatable({}, {
+        _state  = state,
+        _self   = self,
+
+        __index = {
+            cancel = function(_, msg)
+                state.cancel = true
+                if msg then
+                    state.msg = "** " .. tostring(msg)
+                else
+                    state.msg = "** cancelled"
+                end
+            end,
+            isRunning = function(_)
+                return not state.msg
+            end,
+            matched = function(_)
+                return state.matched
+            end,
+            visited = function(_)
+                return state.visited
+            end,
+            runTime = function(_)
+                return state.finished or (os.time() - state.started)
+            end,
+        },
+        __tostring = function(_)
+            return USERDATA_TAG .. ":elementSearchObject " .. tostring(self):match(USERDATA_TAG .. ": (.+)$")
+        end,
+-- For now, not requiring that they capture this value to prevent collection.
+--         __gc = function(_)
+--             if not state.finished then
+--                 _:cancel("gc on elementSearchObject object")
+--             end
+--         end,
+    })
+
+    local esoMT = getmetatable(elementSearchObject)
+    if not namedModifiers.asTree then
+        esoMT.__index.filter = elementSearchResultsFilter -- make sure to document that results table is *new* with only filter method carrying over
+        esoMT.__index.next = function(_)
+            local state = getmetatable(_)._state
+            if not callback or state.finished then
+                if state.msg ~= "completed" then
+                    state.started  = os.time() - state.finished
+                    state.finished = nil
+                    state.cancel   = nil
+                    state.msg      = nil
+                    if callback then
+                        local searchCoroutine
+                        searchCoroutine = coroutine.wrap(function()
+                            local results, countAdded = elementSearchHamsterBF(_)
+                            state.finished = os.time() - state.started
+                            callback(state.msg, results, countAdded)
+                            searchCoroutine = nil -- ensure garbage collection doesn't happen until after we're done
+                        end)
+                        searchCoroutine()
+
+                        return _
+                    else
+                        return elementSearchHamsterBF(_)
+                    end
+                else
+                    return nil
+                end
+            else
+                error("next only available when search not in progress", 2)
+            end
+        end
+    end
 
     if callback then
         local searchCoroutine
         searchCoroutine = coroutine.wrap(function()
-            local results = elementSearchHamsterBF(self, state)
+            local results, countAdded = elementSearchHamsterBF(elementSearchObject)
             state.finished = os.time() - state.started
-            callback(state.msg or "completed", results)
+            callback(state.msg, results, countAdded)
             searchCoroutine = nil -- ensure garbage collection doesn't happen until after we're done
         end)
         searchCoroutine()
 
-        return setmetatable({}, {
-            __index = {
-                cancel = function(_, msg)
-                    state.cancel = true
-                    if msg then
-                        state.msg = "** " .. tostring(msg)
-                    else
-                        state.msg = "** cancelled"
-                    end
-                end,
-                isRunning = function(_)
-                    return not state.msg
-                end,
-                matched = function(_)
-                    return state.matched
-                end,
-                visited = function(_)
-                    return state.visited
-                end,
-                runTime = function(_)
-                    return state.finished or (os.time() - state.started)
-                end,
-            },
-            __tostring = function(_)
-                return USERDATA_TAG .. ":elementSearchObject " .. tostring(self):match(USERDATA_TAG .. ": (.+)$")
-            end,
-    -- For now, not requiring that they capture this value to prevent collection.
-    --         __gc = function(_)
-    --             _:cancel("gc on elementSearchObject object")
-    --         end,
-        })
+        return elementSearchObject
     else
-        return elementSearchHamsterBF(self, state)
+        return elementSearchHamsterBF(elementSearchObject)
     end
 end
 
