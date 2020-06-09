@@ -74,6 +74,7 @@ Returns:
 Notes:
  * this constructor can be used to create a range from axTextMarkerObjects obtained from an application to specify a new range for a paramterized attribute. As a simple example (it is hoped that more will be added to the Hammerspoon wiki shortly):
 
+    ~~~lua
     s = hs.axuielement.applicationElement(hs.application("Safari"))
     -- for a window displaying the DuckDuckGo main search page, this gets the
     -- primary display area. Other pages may vary and you should build your
@@ -83,6 +84,7 @@ Notes:
     ending = c("AXNextLineEndTextMarkerForTextMarker", start) -- get the next end of line marker
     print(c("AXStringForTextMarkerRange", hs.axuielement.axtextmarker.newRange(start, ending)))
     -- outputs "Privacy, simplified." to the Hammerspoon console
+    ~~~
 
  * The specific attributes and parameterized attributes supported by a given application differ and can be discovered with the `hs.axuielement:getAttributeNames` and `hs.axuielement:getParameterizedAttributeNames` methods.
 
