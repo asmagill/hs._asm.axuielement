@@ -952,14 +952,15 @@ static int axuielement_pushAttributesTable(lua_State *L) {
     lua_setfield(L, -2, "misc") ;
 // Table and outline view attributes
     lua_newtable(L) ;
-    [skin pushNSObject:(__bridge NSString *)kAXRowsAttribute] ;                   lua_setfield(L, -2, "rows") ;
-    [skin pushNSObject:(__bridge NSString *)kAXVisibleRowsAttribute] ;            lua_setfield(L, -2, "visibleRows") ;
-    [skin pushNSObject:(__bridge NSString *)kAXSelectedRowsAttribute] ;           lua_setfield(L, -2, "selectedRows") ;
-    [skin pushNSObject:(__bridge NSString *)kAXColumnsAttribute] ;                lua_setfield(L, -2, "columns") ;
-    [skin pushNSObject:(__bridge NSString *)kAXVisibleColumnsAttribute] ;         lua_setfield(L, -2, "visibleColumns") ;
-    [skin pushNSObject:(__bridge NSString *)kAXSelectedColumnsAttribute] ;        lua_setfield(L, -2, "selectedColumns") ;
-    [skin pushNSObject:(__bridge NSString *)kAXSortDirectionAttribute] ;          lua_setfield(L, -2, "sortDirection") ;
-    [skin pushNSObject:(__bridge NSString *)kAXIndexAttribute] ;                  lua_setfield(L, -2, "index") ;
+    [skin pushNSObject:(__bridge NSString *)kAXRowsAttribute] ;                     lua_setfield(L, -2, "rows") ;
+    [skin pushNSObject:(__bridge NSString *)kAXVisibleRowsAttribute] ;              lua_setfield(L, -2, "visibleRows") ;
+    [skin pushNSObject:(__bridge NSString *)kAXSelectedRowsAttribute] ;             lua_setfield(L, -2, "selectedRows") ;
+    [skin pushNSObject:(__bridge NSString *)kAXColumnsAttribute] ;                  lua_setfield(L, -2, "columns") ;
+    [skin pushNSObject:(__bridge NSString *)kAXVisibleColumnsAttribute] ;           lua_setfield(L, -2, "visibleColumns") ;
+    [skin pushNSObject:(__bridge NSString *)kAXSelectedColumnsAttribute] ;          lua_setfield(L, -2, "selectedColumns") ;
+    [skin pushNSObject:(__bridge NSString *)kAXSortDirectionAttribute] ;            lua_setfield(L, -2, "sortDirection") ;
+    [skin pushNSObject:(__bridge NSString *)kAXIndexAttribute] ;                    lua_setfield(L, -2, "index") ;
+    [skin pushNSObject:(__bridge NSString *)kAXInsertionPointLineNumberAttribute] ; lua_setfield(L, -2, "insertionPointLineNumber") ;
     lua_setfield(L, -2, "table") ;
 // Matte attributes
     lua_newtable(L) ;
@@ -1076,7 +1077,6 @@ static int axuielement_pushParamaterizedAttributesTable(lua_State *L) {
     [skin pushNSObject:(__bridge NSString *)kAXRTFForRangeParameterizedAttribute] ;               lua_setfield(L, -2, "RTFForRange") ;
     [skin pushNSObject:(__bridge NSString *)kAXAttributedStringForRangeParameterizedAttribute] ;  lua_setfield(L, -2, "attributedStringForRange") ;
     [skin pushNSObject:(__bridge NSString *)kAXStyleRangeForIndexParameterizedAttribute] ;        lua_setfield(L, -2, "styleRangeForIndex") ;
-    [skin pushNSObject:(__bridge NSString *)kAXInsertionPointLineNumberAttribute] ;               lua_setfield(L, -2, "insertionPointLineNumber") ;
     [skin pushNSObject:(__bridge NSString *)kAXCellForColumnAndRowParameterizedAttribute] ;       lua_setfield(L, -2, "cellForColumnAndRow") ;
     [skin pushNSObject:(__bridge NSString *)kAXLayoutPointForScreenPointParameterizedAttribute] ; lua_setfield(L, -2, "layoutPointForScreenPoint") ;
     [skin pushNSObject:(__bridge NSString *)kAXLayoutSizeForScreenSizeParameterizedAttribute] ;   lua_setfield(L, -2, "layoutSizeForScreenSize") ;

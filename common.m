@@ -139,8 +139,8 @@ static int pushCFTypeHamster(lua_State *L, CFTypeRef theItem, NSMutableDictionar
             CFRange theRange ;
             AXValueGetValue((AXValueRef)theItem, kAXValueCFRangeType, &theRange) ;
             lua_newtable(L) ;
-              lua_pushinteger(L, theRange.location) ; lua_setfield(L, -2, "loc") ;
-              lua_pushinteger(L, theRange.length) ;   lua_setfield(L, -2, "len") ;
+              lua_pushinteger(L, theRange.location) ; lua_setfield(L, -2, "location") ;
+              lua_pushinteger(L, theRange.length) ;   lua_setfield(L, -2, "length") ;
         } else if (valueType == kAXValueAXErrorType) {
             AXError theError ;
             AXValueGetValue((AXValueRef)theItem, kAXValueAXErrorType, &theError) ;

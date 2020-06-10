@@ -533,13 +533,14 @@ local elementSearchHamsterBF = function(elementSearchObject)
 
         local element = table.remove(queue, 1)
         if getmetatable(element) == objectMT then
+            local aav = element:allAttributeValues()
             state.visited = state.visited + 1
             if criteriaEmpty or element:matchesCriteria(criteria, isPattern) then
                 state.matched = state.matched + 1
                 local keeping = objectOnly and element or seen[element]
                 if not objectOnly then
                     -- store the table of details so we can replace the axuielement objects in the final results for attributes and children with their details
-                    for k,v in pairs(element:allAttributeValues()) do keeping[k] = v end
+                    for k,v in pairs(aav) do keeping[k] = v end
                     keeping._element                 = element
                     keeping._actions                 = element:actionNames()
                     keeping._attributes              = element:attributeNames()
@@ -550,8 +551,25 @@ local elementSearchHamsterBF = function(elementSearchObject)
             end
             if type(queue[#queue]) ~= "table" then table.insert(queue, {}) end
             local nxtLvlQueue = queue[#queue]
-            local children = element("children") or {}
-            for _,v in ipairs(children) do
+
+            -- most are in AXChildren, but a handful aren't, and a few are even nested in subtables (e.g. AXSections)
+            -- so lets get them all -- seen will filter the duplicates in the next section
+            local childObjectsToCheck = {}
+            local findObjsInAAV
+            findObjsInAAV = function(x)
+                if getmetatatble(x) == objectMT then
+                    table.insert(childObjectsToCheck, x)
+                elseif type(x) == "table" then
+                    for _,v in pairs(aav) do
+                        if type(v) == "table" or getmetatatble(v) == objectMT then
+                            findObjsInAAV(v)
+                        end
+                    end
+                end
+            end
+            findObjsInAAV(aav)
+
+            for _,v in ipairs(childObjectsToCheck) do
                 if state.callback and coroutine.isyieldable() then coroutine.applicationYield() end -- luacheck: ignore
                 if not seen[v] then
                     seen[v] = {}

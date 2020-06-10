@@ -1,0 +1,33 @@
+Unless otherwise stated, all numeric specifications start at 0
+
+<range>  - specified as { location = #, length = # } (C style, starts at 0) or
+                        { starts = #, ends = # }     (Lua style, starts at 1, does not support negative indices)
+           returned as C style
+<pos>    - specified/returned as position table { x = #, y = # } relative to screen
+<size>   - specified/returned as size table { h = #, w = # }
+<bounds> - specified/returned as position-and-size table { x = #, y = #, h = #, w = # } relative to screen
+
+AXRTFForRange                 <range>   returns string of RTF encoding for specified range
+AXAttributedStringForRange    <range>   returns hs.styledtext object for specified range
+AXBoundsForRange              <range>   returns <bounds> for specified range
+AXCellForColumnAndRow
+AXInsertionPointLineNumber
+AXLayoutPointForScreenPoint
+AXLayoutSizeForScreenSize
+AXLineForIndex                int       returns line number for index/char position or nil if out of range
+AXRangeForIndex               int       returns <range> for index/char position or nil if out of range
+AXRangeForLine                int       returns <range> for line number or nil if line number invalid
+AXRangeForPosition            <pos>     returns <range> for smallest element at position; 0 length and location if no element
+AXScreenPointForLayoutPoint
+AXScreenSizeForLayoutSize
+AXStringForRange              <range>   returns string for specified range
+AXStyleRangeForIndex          int       returns <range> for style that is applied at index/char position or nil if out of range
+
+Also seen:
+
+AXReplaceRangeWithText
+    accepts table of format { AXReplacementText = "string", AXReplacementRange = <range> }
+        returns true but has no apparent effect
+    tested with Terminal and TextEdit
+
+AXSharedTextElementForIndex   int       returns hs.axuielement object which represents/contains item at index position
