@@ -826,10 +826,13 @@ end
 local _applicationElement = module.applicationElement
 module.applicationElement = function(obj)
     if type(obj) == "string" or type(obj) == "number" then
-        return _applicationElement(application.find(obj))
-    else
-        return _applicationElement(obj)
+        for _,v in ipairs(table.pack(application.find(obj))) do
+            if getmetatable(v) == hs.getObjectMetatable("hs.application") then
+                return _applicationElement(v)
+            end
+        end
     end
+    return _applicationElement(obj)
 end
 
 local _windowElement = module.windowElement
