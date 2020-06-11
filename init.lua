@@ -39,7 +39,7 @@ end
 local log  = require("hs.logger").new(USERDATA_TAG, require"hs.settings".get(USERDATA_TAG .. ".logLevel") or "warning")
 module.log = log
 
--- local fnutils = require("hs.fnutils")
+local fnutils = require("hs.fnutils")
 
 require("hs.styledtext")
 
@@ -553,40 +553,44 @@ local elementSearchHamsterBF = function(elementSearchObject)
             local nxtLvlQueue = queue[#queue]
 
             -- most are in AXChildren, but a handful aren't, and a few are even nested in subtables (e.g. AXSections)
-            -- so lets get them all -- seen will filter the duplicates in the next section
-            local childObjectsToCheck = {}
-            local findObjsInAAV
-            findObjsInAAV = function(x)
-                if getmetatatble(x) == objectMT then
-                    table.insert(childObjectsToCheck, x)
-                elseif type(x) == "table" then
-                    for _,v in pairs(aav) do
-                        if type(v) == "table" or getmetatatble(v) == objectMT then
-                            findObjsInAAV(v)
-                        end
-                    end
+            local newChildren = {}
+            for k,v in pairs(aav) do
+                if includeParents or not fnutils.contains(parentLabels, k) then
+                    table.insert(newChildren, v)
                 end
             end
-            findObjsInAAV(aav)
-
-            for _,v in ipairs(childObjectsToCheck) do
+            while #newChildren > 0 do
                 if state.callback and coroutine.isyieldable() then coroutine.applicationYield() end -- luacheck: ignore
-                if not seen[v] then
-                    seen[v] = {}
-                    table.insert(nxtLvlQueue, v)
-                end
-            end
-            if includeParents then
-                for _,v in ipairs(parentLabels) do
-                    local pElement = element(v)
-                    if pElement then
-                        if not seen[v] then
-                            seen[v] = {}
-                            table.insert(nxtLvlQueue, v)
-                        end
+                local potential = table.remove(newChildren, 1)
+                if getmetatable(potential) == objectMT then
+                    if not seen[potential] then
+                        seen[potential] = {}
+                        table.insert(nxtLvlQueue, potential)
                     end
+                elseif type(potential) == "table" then
+                    for _,v in pairs(potential) do table.insert(newChildren, v) end
                 end
             end
+
+--             local childObjectsToCheck = element("children") or {}
+--             for _,v in ipairs(childObjectsToCheck) do
+--                 if state.callback and coroutine.isyieldable() then coroutine.applicationYield() end -- luacheck: ignore
+--                 if not seen[v] then
+--                     seen[v] = {}
+--                     table.insert(nxtLvlQueue, v)
+--                 end
+--             end
+--             if includeParents then
+--                 for _,v in ipairs(parentLabels) do
+--                     local pElement = element(v)
+--                     if pElement then
+--                         if not seen[pElement] then
+--                             seen[pElement] = {}
+--                             table.insert(nxtLvlQueue, pElement)
+--                         end
+--                     end
+--                 end
+--             end
         elseif type(element) == "table" then
             queue = element
             depth = depth + 1

@@ -118,7 +118,7 @@ local buildChoicesForObject = function(obj)
     for k,v in fnutils.sortByKeys(aav) do
         local entry = {}
         if type(v) == "table" then
-            entry.text = textPrefix .. k .. " { ... }"
+            entry.text = textPrefix .. k .. " { ... }   -->"
             if #v == 0 and next(v) then
                 entry.subText = "key-value table"
             else
@@ -133,6 +133,7 @@ local buildChoicesForObject = function(obj)
                 entry.text = textPrefix .. k
                 entry.attribute = k
             end
+            entry.text = entry.text .. "   -->"
             entry.subText = "Role: " .. tostring(v("role")) .. ", Subrole: " .. tostring(v("subrole")) .. ", Description: " .. tostring(v("valueDescription") or v("description") or v("roleDescription"))
         else
             entry.text     = textPrefix .. k
@@ -219,7 +220,7 @@ local chooserCallback = function(item)
     if not item.cmdNoAdd then storage._path = storage._path .. (item.cmdAddition or "") end
 
     if obj then
-        _chooser:choices(buildChoicesForObject(obj)):show():query(nil):selectedRow(1)
+        _chooser:choices(buildChoicesForObject(obj)):query(nil):selectedRow(1):show()
     else
         if item.action and eventtap.checkKeyboardModifiers().cmd then
             objDetails.element("do" .. item.action)
@@ -292,7 +293,7 @@ module.debug = false
 module.browse = function(...)
     local args = table.pack(...)
     if (args.n > 0) then
-        obj = args[1]
+        local obj = args[1]
         storage = { _path = "obj" }
         if obj then
             local appElement = obj
@@ -329,7 +330,7 @@ module.browse = function(...)
         _chooser:choices(buildChoicesForObject(currentApp)):query(nil):selectedRow(1)
     end
 
-    _chooser:show():query(nil):selectedRow(1)
+    _chooser:show()
 end
 
 return module
