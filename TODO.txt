@@ -1,18 +1,19 @@
-TODO: * Notifications/Observers?
-      * test setAttributeValue more thoroughly
-      * test getParameterizedAttributeValue more thoroughly
-
-      * revisit hs.uielement merger -- not happening in near term; uielement is being cleaned up and provides a simpler, safer interface to the basics; this module is for those who need/want more.
-
-      + retest examples given
-
-
-      + reconsider and/or reimplement
-      ?     hs.axuielement:searchPath
-      *     hs.axuielement:next
-
+TODO:
       Finish ParamaterizedAttribute notes
-      allow `hs.axuielement.applicationElement` to take string and invoke `hs.application.find` if it's a string
-      allow `hs.axuielement.windowElement` to take string and invoke `hs.window.find` if it's a string
+*     allow `hs.axuielement.applicationElement` to take string and invoke `hs.application.find` if it's a string
+*     allow `hs.axuielement.windowElement` to take string and invoke `hs.window.find` if it's a string
       review NSAccessibilityConstants.h and see what it includes that AXAttributeConstants.h -- I've already found a few differences
-      Add CGColor conversion support
+ +    Add CGColor conversion support
+*         also converted to NSURL for CFURL
+ +        and added CGImage/NSImage conversion)
+*     Notifications/Observers?
+*     test setAttributeValue more thoroughly
+*     test getParameterizedAttributeValue more thoroughly
+
+ +    retest examples given
+
+ +    reconsider and/or reimplement
+ ?        hs.axuielement:searchPath
+*         hs.axuielement:next
+
+-     revisit hs.uielement merger -- not happening in near term; uielement is being cleaned up and provides a simpler, safer interface to the basics; this module is for those who need/want more.
