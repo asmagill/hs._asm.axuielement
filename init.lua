@@ -39,9 +39,15 @@ end
 local log  = require("hs.logger").new(USERDATA_TAG, require"hs.settings".get(USERDATA_TAG .. ".logLevel") or "warning")
 module.log = log
 
-local fnutils = require("hs.fnutils")
+local fnutils     = require("hs.fnutils")
+local application = require("hs.application")
+local window      = require("hs.window")
 
+-- included for their lua<->NSObject helpers
 require("hs.styledtext")
+require("hs.drawing.color")
+require("hs.image")
+require("hs.sharing")
 
 local objectMT = hs.getObjectMetatable(USERDATA_TAG)
 
@@ -814,6 +820,24 @@ objectMT.elementSearch = function(self, callback, criteria, namedModifiers)
         return elementSearchObject
     else
         return elementSearchHamsterBF(elementSearchObject)
+    end
+end
+
+local _applicationElement = module.applicationElement
+module.applicationElement = function(obj)
+    if type(obj) == "string" or type(obj) == "number" then
+        return _applicationElement(application.find(obj))
+    else
+        return _applicationElement(obj)
+    end
+end
+
+local _windowElement = module.windowElement
+module.windowElement = function(obj)
+    if type(obj) == "string" or type(obj) == "number" then
+        return _windowElement(window.find(obj))
+    else
+        return _windowElement(obj)
     end
 end
 

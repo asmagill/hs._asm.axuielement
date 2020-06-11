@@ -68,10 +68,13 @@ static int errorWrapper(lua_State *L, NSString *where, NSString *what, AXError e
 /// Returns the accessibility object for the window specified by the `hs.window` object.
 ///
 /// Parameters:
-///  * `windowObject` - the `hs.window` object for the window.
+///  * `windowObject` - the `hs.window` object for the window or a string or number which will be passed to `hs.window.find` to get an `hs.window` object.
 ///
 /// Returns:
 ///  * an axuielementObject for the window specified
+///
+/// Notes:
+///  * if `windowObject` is a string or number, only the first item found with `hs.window.find` will be used by this function to create an axuielementObject.
 static int axuielement_getWindowElement(lua_State *L)      {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     // vararg here to mimic original behavior and allow constructs to use `hs.window(...)` as arg as this may
@@ -93,10 +96,13 @@ static int axuielement_getWindowElement(lua_State *L)      {
 /// Returns the top-level accessibility object for the application specified by the `hs.application` object.
 ///
 /// Parameters:
-///  * `applicationObject` - the `hs.application` object for the Application.
+///  * `applicationObject` - the `hs.application` object for the Application or a string or number which will be passed to `hs.application.find` to get an `hs.application` object.
 ///
 /// Returns:
 ///  * an axuielementObject for the application specified
+///
+/// Notes:
+///  * if `applicationObject` is a string or number, only the first item found with `hs.application.find` will be used by this function to create an axuielementObject.
 static int axuielement_getApplicationElement(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     // vararg here to mimic original behavior and allow constructs to use `hs.application(...)` as arg as this may
