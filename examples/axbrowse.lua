@@ -43,6 +43,7 @@ local timer       = require("hs.timer")
 local eventtap    = require("hs.eventtap")
 local application = require("hs.application")
 local canvas      = require("hs.canvas")
+local window      = require("hs.window")
 
 -- Used for debugging
     local cbinspect = function(...)
@@ -297,6 +298,21 @@ module.browse = function(...)
         storage = { _path = "obj" }
         if obj then
             local appElement = obj
+            if type(obj) == "string" or type(obj) == "number" then
+                local interimObj = window.find(obj)
+                if interimObj then
+                    appElement = ax.windowElement(interimObj)
+                    obj = appElement
+                else
+                    interimObj = application.find(obj)
+                    if interimObj then
+                        appElement = ax.applicationElement(interimObj)
+                        obj = appElement
+                    else
+                        error("requires hs.axuielement or string/number corresponding to an application or window as per hs.application.find or hs.window.find", 2)
+                    end
+                end
+            end
             while appElement("AXRole") ~= "AXApplication" do appElement = appElement("AXParent") end
             storage._appElement = appElement
             _chooser:choices(buildChoicesForObject(obj)):query(nil):selectedRow(1)
