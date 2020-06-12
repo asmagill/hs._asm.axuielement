@@ -5,8 +5,6 @@
 
 // AXTextMarker and AXTextMarkerRange support gleaned from HIServices framework disassembly and
 // https://chromium.googlesource.com/chromium/src/+/ee5dac5d4335b5f4fc6bd99136d38e7a070a4559/content/browser/accessibility/browser_accessibility_cocoa.mm
-//
-// We can "decode" them, and I *think* set them, but since I don't understand the binary data yet, this is still experimental
 typedef CFTypeRef AXTextMarkerRangeRef ;
 typedef CFTypeRef AXTextMarkerRef ;
 
@@ -20,6 +18,15 @@ extern AXTextMarkerRangeRef AXTextMarkerRangeCreate(CFAllocatorRef allocator, AX
 extern AXTextMarkerRef      AXTextMarkerRangeCopyStartMarker(AXTextMarkerRangeRef text_marker_range) __attribute__((weak_import)) ;
 extern AXTextMarkerRef      AXTextMarkerRangeCopyEndMarker(AXTextMarkerRangeRef text_marker_range) __attribute__((weak_import)) ;
 
+
+// In AppKit disassembly but not in header files
+extern NSString *NSAccessibilityAttributedValueForStringAttributeParameterizedAttribute ;
+extern NSString *NSAccessibilityScrollToShowDescendantParameterizedAttributeAction ;
+extern NSString *NSAccessibilityIndexForChildUIElementParameterizedAttribute ;
+extern NSString *NSAccessibilityResultsForSearchPredicateParameterizedAttribute ;
+extern NSString *NSAccessibilityLoadSearchResultParameterizedAttribute ;
+extern NSString *NSAccessibilityFocusRingManipulationParameterizedAttribute ;
+extern NSString *NSAccessibilityReplaceRangeWithTextParameterizedAttribute ;
 
 
 #define USERDATA_TAG     "hs.axuielement"

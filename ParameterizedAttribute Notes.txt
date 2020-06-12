@@ -8,7 +8,8 @@ Unless otherwise stated, all numeric specifications start at 0
 <l_point>   - specified/returned as position table { x = #, y = # } relative to AXLayoutArea object
 <l_size>    - specified/returned as size table { h = #, w = # } relative to AXLayoutArea object
 <rect>      - specified/returned as position-and-size table { x = #, y = #, h = #, w = # } relative to screen
-
+<color>     - color table as specified in hs.drawing.color
+<axObj>     - hs.axuielement object
 <markerObj> - hs.axuielement.axtextmarker object - specifies application specific opaque location within an element's contents
 <rangeObj>  - hs.axuielement.axtextmarkerrange object - specifies a range within an element's contents
                   specified by a start and end <markerObj>
@@ -21,7 +22,7 @@ This section is mostly from comments in NSAccessibilityConstants.h, NSAccessibil
 
     AXAttributedStringForRange    <range>   returns hs.styledtext object for specified range of characters
     AXBoundsForRange              <range>   returns visual <rect> for specified range of characters
-    AXCellForColumnAndRow         { c, r }  returns hs.axuielement of table cell at col, row
+    AXCellForColumnAndRow         { c, r }  returns <axObj> of table cell at col, row
     AXLayoutPointForScreenPoint   <s_point> returns <l_point> in AXLayoutArea for equivalent screen point
     AXLayoutSizeForScreenSize     <s_size>  returns <l_size> in AXLayoutArea for equivalent screen size
     AXLineForIndex                int       returns line number for char position
@@ -41,9 +42,44 @@ This section is mostly from comments in NSAccessibilityConstants.h, NSAccessibil
             returns true but has no apparent effect
         tested with Terminal and TextEdit
 
-    AXSharedTextElementForIndex   int       returns hs.axuielement object which contains chacter at index position
+    AXSharedTextElementForIndex   int       returns <axObj> object which contains chacter at index position
 
+    AXScrollToShowDescendant      <axObj>   Scrolls AXScrollArea to descendant and returns true if succeeds, otherwise nil. Seems only *some* descendants work -- I was able to get it to scroll to a specific AXCell in Contacts, but not to a specific AXRow (the parent of the very AXCell it *would* scroll to)
 
+    AXAttributedValueForStringAttribute
+        I *think* this is the object referred to in AXTextAttributedString.h as `kAXParameterizedAttributeStringAttribute`, but I haven't found it in any application I've checked thus far.
+        Apparently an attributed string can be an accessibility object itself, but thus far every app I've come across stores text in an AXTextArea and can be made to render its contents *as* an attributed string, not as an element of an attributed string, so this method doesn't apply there.
+        If I'm right, and we find an element that represents an attribute string, then I *think* this method would take one of the following as a string parameter and return the value or maybe a key-value table to *change* them? It's unclear in AXTextAttributedString.h and until I can find an element to test with, these are just suppositions based on comments in the file:
+
+            AXAttachment          <axObj> representing the text attachment
+            AXAutocorrected       boolean indicating whether the text was autocorrected
+            AXBackgroundColor     <color> text background color
+            AXFont                a key-value table with two or more of the following keys:
+                AXFontName            string specifying font name (required)
+                AXFontSize            number specifying font size (required)
+                AXFontFamily          string specifying font family (optional)
+                AXVisibleName         string specifying font display name (optional)
+            AXForegroundColor     <color> text foreground color
+            AXLink                <axObj> of the object to which the specified range of text links
+            AXListItemIndex       int value that indicates the line index. Each list item increments the index, even for unordered lists. The first item should have index 0.
+            AXListItemLevel       int  value that indicates the indent level. Each sublist increments the level. The first item should have level 0.
+            AXListItemPrefix      hs.styledtext object that prependeds string of the list item. If the string is a common unicode character (e.g. a bullet •), return that unicode character. For lists with images before the text, return a reasonable label of the image.
+            AXMarkedMisspelled    boolean indicating if the text is marked as misspelled
+            AXMisspelled          boolean indicating if the text is misspelled
+            AXNaturalLanguage     string that indicates the language in which the text will be spoken aloud by the system.
+            AXReplacementString   string that indicates the string that will replace the text
+            AXShadow              boolean that indicates whether the text displays shadow.
+            AXStrikethroughColor  <color> text strikethrough color
+            AXStrikethrough       boolean indicates whether the text displays strikethrough.
+            AXSuperscript         number that indicates whether the text is superscript (value > 0) or subscript (value < 0)
+            AXUnderlineColor      <color> text underline color
+            AXUnderline           int  specifying underline style: 0 = none, 1 = single, 2 = thick, 9 = double
+
+    These were also found in AppKit disassembly via Hopper, but at present haven't been seen in an application:
+        AXFocusRingManipulation       -- may be additional keys related to this in the disassembly; need to find one and test
+        AXIndexForChildUIElement
+        AXLoadSearchResult            -- may be additional keys related to this in the disassembly; need to find one and test
+        AXResultsForSearchPredicate
 
 This section contains parameterized attributes seen in Safari, but may also exist in other places (likely anything using WebKit or
 its derivatives); these are best guesses based upon naming conventions observed and experimentation.

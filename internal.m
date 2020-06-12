@@ -1045,7 +1045,6 @@ static int axuielement_pushAttributesTable(lua_State *L) {
     [skin pushNSObject:(__bridge NSString *)kAXAutocorrectedTextAttribute] ;      lua_setfield(L, -2, "autocorrectedText") ;
     [skin pushNSObject:(__bridge NSString *)kAXBackgroundColorTextAttribute] ;    lua_setfield(L, -2, "backgroundColorText") ;
     [skin pushNSObject:(__bridge NSString *)kAXFontTextAttribute] ;               lua_setfield(L, -2, "fontText") ;
-    [skin pushNSObject:(__bridge NSString *)kAXForegoundColorTextAttribute] ;     lua_setfield(L, -2, "foregoundColorText") ;
     [skin pushNSObject:(__bridge NSString *)kAXForegroundColorTextAttribute] ;    lua_setfield(L, -2, "foregroundColorText") ;
     [skin pushNSObject:(__bridge NSString *)kAXLinkTextAttribute] ;               lua_setfield(L, -2, "linkText") ;
     [skin pushNSObject:(__bridge NSString *)kAXListItemIndexTextAttribute] ;      lua_setfield(L, -2, "listItemIndexText") ;
@@ -1061,6 +1060,12 @@ static int axuielement_pushAttributesTable(lua_State *L) {
     [skin pushNSObject:(__bridge NSString *)kAXSuperscriptTextAttribute] ;        lua_setfield(L, -2, "superscriptText") ;
     [skin pushNSObject:(__bridge NSString *)kAXUnderlineColorTextAttribute] ;     lua_setfield(L, -2, "underlineColorText") ;
     [skin pushNSObject:(__bridge NSString *)kAXUnderlineTextAttribute] ;          lua_setfield(L, -2, "underlineText") ;
+    lua_newtable(L) ;
+        [skin pushNSObject:(__bridge NSString *)kAXFontNameKey] ;    lua_setfield(L, -2, "fontName") ;
+        [skin pushNSObject:(__bridge NSString *)kAXFontFamilyKey] ;  lua_setfield(L, -2, "fontFamilyName") ;
+        [skin pushNSObject:(__bridge NSString *)kAXVisibleNameKey] ; lua_setfield(L, -2, "visibleName") ;
+        [skin pushNSObject:(__bridge NSString *)kAXFontSizeKey] ;    lua_setfield(L, -2, "fontSize") ;
+    lua_setfield(L, -2, "fontTextTableKeys") ;
     lua_setfield(L, -2, "attributedStrings") ;
     return 1 ;
 }
@@ -1071,6 +1076,10 @@ static int axuielement_pushAttributesTable(lua_State *L) {
 ///
 /// Notes:
 ///  * this table is provided for reference only and is not intended to be comprehensive.
+///
+///  * Parameterized attributes are attributes that take an argument when querying the element. There is very little documentation available for most of these and application developers can implement their own for which we may never be able to get any documentation. This table contains parameterized attribute names that are defined within the Apple documentation and a few others that have been discovered.
+///
+///  * Documentation about what has been discovered through experimentation about paramterized attributes is planned and should be added to the Hammerspoon wiki shortly after this module becomes part of a formal release.
 static int axuielement_pushParamaterizedAttributesTable(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     lua_newtable(L) ;
@@ -1088,6 +1097,13 @@ static int axuielement_pushParamaterizedAttributesTable(lua_State *L) {
     [skin pushNSObject:(__bridge NSString *)kAXLayoutSizeForScreenSizeParameterizedAttribute] ;   lua_setfield(L, -2, "layoutSizeForScreenSize") ;
     [skin pushNSObject:(__bridge NSString *)kAXScreenPointForLayoutPointParameterizedAttribute] ; lua_setfield(L, -2, "screenPointForLayoutPoint") ;
     [skin pushNSObject:(__bridge NSString *)kAXScreenSizeForLayoutSizeParameterizedAttribute] ;   lua_setfield(L, -2, "screenSizeForLayoutSize") ;
+    [skin pushNSObject:NSAccessibilityAttributedValueForStringAttributeParameterizedAttribute] ;  lua_setfield(L, -2, "attributedValueForStringAttribute") ;
+    [skin pushNSObject:NSAccessibilityScrollToShowDescendantParameterizedAttributeAction] ;       lua_setfield(L, -2, "scrollToShowDescendant") ;
+    [skin pushNSObject:NSAccessibilityIndexForChildUIElementParameterizedAttribute] ;             lua_setfield(L, -2, "indexForChildUIElement") ;
+    [skin pushNSObject:NSAccessibilityResultsForSearchPredicateParameterizedAttribute] ;          lua_setfield(L, -2, "resultsForSearchPredicate") ;
+    [skin pushNSObject:NSAccessibilityLoadSearchResultParameterizedAttribute] ;                   lua_setfield(L, -2, "loadSearchResult") ;
+    [skin pushNSObject:NSAccessibilityFocusRingManipulationParameterizedAttribute] ;              lua_setfield(L, -2, "focusRingManipulation") ;
+    [skin pushNSObject:NSAccessibilityReplaceRangeWithTextParameterizedAttribute] ;               lua_setfield(L, -2, "replaceRangeWithText") ;
     return 1 ;
 }
 
