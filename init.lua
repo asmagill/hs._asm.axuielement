@@ -51,18 +51,22 @@ require("hs.sharing")
 
 local objectMT = hs.getObjectMetatable(USERDATA_TAG)
 
-local parentLabels = { module.attributes.general.parent, module.attributes.general.topLevelUIElement }
+local parentLabels = { module.attributes.parent, module.attributes.topLevelUIElement }
 
 -- private variables and methods -----------------------------------------
 
 -- Public interface ------------------------------------------------------
 
-module.roles                   = ls.makeConstantsTable(module.roles)
-module.subroles                = ls.makeConstantsTable(module.subroles)
 module.parameterizedAttributes = ls.makeConstantsTable(module.parameterizedAttributes)
 module.actions                 = ls.makeConstantsTable(module.actions)
 module.attributes              = ls.makeConstantsTable(module.attributes)
-module.directions              = ls.makeConstantsTable(module.directions)
+
+module.roles                   = ls.makeConstantsTable(module.roles)
+module.subroles                = ls.makeConstantsTable(module.subroles)
+module.sortDirections          = ls.makeConstantsTable(module.sortDirections)
+module.orientations            = ls.makeConstantsTable(module.orientations)
+module.rulerMarkers            = ls.makeConstantsTable(module.rulerMarkers)
+module.units                   = ls.makeConstantsTable(module.units)
 
 module.observer.notifications  = ls.makeConstantsTable(module.observer.notifications)
 
@@ -94,11 +98,11 @@ objectMT.__index = function(self, _)
 
         -- Now for the dynamically generated methods...
 
-        local matchName = _:match("^set(.+)$")
-        if not matchName then matchName = _:match("^do(.+)$") end
-        if not matchName then matchName = _:match("^(.+)WithParameter$") end
+        local matchName = _:match("^set(%u[%w_]*)$")
+        if not matchName then matchName = _:match("^do(%u[%w_]*)$") end
+        if not matchName then matchName = _:match("^([%w_]+)Parameter$") end
         if not matchName then matchName = _ end
-        local formalName = matchName:match("^AX[%w%d_]+$") and matchName or "AX"..matchName:sub(1,1):upper()..matchName:sub(2)
+        local formalName = matchName:match("^AX[%w_]+$") and matchName or "AX"..matchName:sub(1,1):upper()..matchName:sub(2)
 
         -- luacheck: push ignore __
 
@@ -191,7 +195,7 @@ objectMT.__pairs = function(_)
     for __, v in ipairs(objectMT.parameterizedAttributeNames(_) or {}) do
         local partialName = v:match("^AX(.*)")
         if partialName then
-            keys[partialName:sub(1,1):lower() .. partialName:sub(2) .. "WithParameter"] = true
+            keys[partialName:sub(1,1):lower() .. partialName:sub(2) .. "Parameter"] = true
         end
     end
 
@@ -299,11 +303,14 @@ objectMT.matchesCriteria = function(self, criteria, isPattern)
     local answer = nil
     if getmetatable(self) == objectMT then
         answer = true
-        local values = self:allAttributeValues() or {}
+        local values = self:allAttributeValues(true) or {}
         for k, v in pairs(criteria) do
             local formalName = k:match("^AX[%w_]+$") and k or "AX"..k:sub(1,1):upper()..k:sub(2)
             local result = values[formalName]
-            if result == nil then result = false end -- nil can't be a value in the criteria, so match it to false
+            if type(result) == "table" and result._code == -25212 then
+                result = false -- nil can't be a value in the criteria, so we match it to false instead
+            end
+
             if type(v) ~= "table" then v = { v } end
             local partialAnswer = false
             for _, v2 in ipairs(v) do
@@ -539,7 +546,7 @@ local elementSearchHamsterBF = function(elementSearchObject)
 
         local element = table.remove(queue, 1)
         if getmetatable(element) == objectMT then
-            local aav = element:allAttributeValues()
+            local aav = element:allAttributeValues(true)
             state.visited = state.visited + 1
             if criteriaEmpty or element:matchesCriteria(criteria, isPattern) then
                 state.matched = state.matched + 1
@@ -562,7 +569,9 @@ local elementSearchHamsterBF = function(elementSearchObject)
             local newChildren = {}
             for k,v in pairs(aav) do
                 if includeParents or not fnutils.contains(parentLabels, k) then
-                    table.insert(newChildren, v)
+                    if not (type(v) == "table" and v._code and v.error) then -- skip error tables
+                        table.insert(newChildren, v)
+                    end
                 end
             end
             while #newChildren > 0 do
