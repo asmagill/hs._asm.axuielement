@@ -1,5 +1,5 @@
 hs.axuielement
-===================
+==============
 
 This module allows you to access the accessibility objects of running applications, their windows, menus, and other user interface elements that support the OS X accessibility API.
 
@@ -21,6 +21,7 @@ The module also dynamically supports treating the axuielementObject useradata as
 
 You can also treat the axuielementObject userdata as a table of key-value pairs to generate a list of the dynamically generated functions: `for k, v in pairs(object) do print(k, v) end` (this is essentially what [hs.axuielement:dynamicMethods](#dynamicMethods) does).
 
+
 ### Usage
 ~~~lua
 axuielement = require("hs.axuielement")
@@ -37,38 +38,41 @@ axuielement = require("hs.axuielement")
 * <a href="#windowElement">axuielement.windowElement(windowObject) -> axuielementObject</a>
 
 ##### Module Methods
-* <a href="#actionDescription">axuielement:actionDescription(action) -> string</a>
-* <a href="#actionNames">axuielement:actionNames() -> table</a>
-* <a href="#allAttributeValues">axuielement:allAttributeValues([includeErrors]) -> table</a>
-* <a href="#allChildElements">axuielement:allChildElements(callback, [withParents]) -> childElementsObject</a>
+* <a href="#actionDescription">axuielement:actionDescription(action) -> string | nil, errString</a>
+* <a href="#actionNames">axuielement:actionNames() -> table | nil, errString</a>
+* <a href="#allAttributeValues">axuielement:allAttributeValues([includeErrors]) -> table | nil, errString</a>
+* <a href="#allChildElements">axuielement:allChildElements(callback, [withParents]) -> elementSearchObject</a>
 * <a href="#asHSApplication">axuielement:asHSApplication() -> hs.application object | nil</a>
 * <a href="#asHSWindow">axuielement:asHSWindow() -> hs.window object | nil</a>
-* <a href="#attributeNames">axuielement:attributeNames() -> table</a>
-* <a href="#attributeValue">axuielement:attributeValue(attribute) -> value</a>
-* <a href="#attributeValueCount">axuielement:attributeValueCount(attribute) -> integer</a>
-* <a href="#buildTree">axuielement:buildTree(callback, [depth], [withParents]) -> buildTreeObject</a>
+* <a href="#attributeNames">axuielement:attributeNames() -> table | nil, errString</a>
+* <a href="#attributeValue">axuielement:attributeValue(attribute) -> value | nil, errString</a>
+* <a href="#attributeValueCount">axuielement:attributeValueCount(attribute) -> integer | nil, errString</a>
+* <a href="#buildTree">axuielement:buildTree(callback, [depth], [withParents]) -> elementSearchObject</a>
 * <a href="#copy">axuielement:copy() -> axuielementObject</a>
 * <a href="#dynamicMethods">axuielement:dynamicMethods([keyValueTable]) -> table</a>
-* <a href="#elementAtPosition">axuielement:elementAtPosition(x, y | pointTable) -> axuielementObject</a>
+* <a href="#elementAtPosition">axuielement:elementAtPosition(x, y | pointTable) -> axuielementObject | nil, errString</a>
 * <a href="#elementSearch">axuielement:elementSearch(callback, [criteria], [namedModifiers]) -> elementSearchObject</a>
-* <a href="#isAttributeSettable">axuielement:isAttributeSettable(attribute) -> boolean</a>
-* <a href="#isValid">axuielement:isValid() -> boolean</a>
+* <a href="#isAttributeSettable">axuielement:isAttributeSettable(attribute) -> boolean | nil, errString</a>
+* <a href="#isValid">axuielement:isValid() -> boolean | nil, errString</a>
 * <a href="#matchesCriteria">axuielement:matchesCriteria(criteria, [isPattern]) -> boolean</a>
-* <a href="#parameterizedAttributeNames">axuielement:parameterizedAttributeNames() -> table</a>
-* <a href="#parameterizedAttributeValue">axuielement:parameterizedAttributeValue(attribute, parameter) -> value</a>
+* <a href="#parameterizedAttributeNames">axuielement:parameterizedAttributeNames() -> table | nil, errString</a>
+* <a href="#parameterizedAttributeValue">axuielement:parameterizedAttributeValue(attribute, parameter) -> value | nil, errString</a>
 * <a href="#path">axuielement:path() -> table</a>
-* <a href="#performAction">axuielement:performAction(action) -> axuielement | false | nil</a>
-* <a href="#pid">axuielement:pid() -> integer</a>
-* <a href="#setAttributeValue">axuielement:setAttributeValue(attribute, value) -> axuielementObject | nil</a>
-* <a href="#setTimeout">axuielement:setTimeout(value) -> axuielementObject</a>
+* <a href="#performAction">axuielement:performAction(action) -> axuielement | false | nil, errString</a>
+* <a href="#pid">axuielement:pid() -> integer | nil, errString</a>
+* <a href="#setAttributeValue">axuielement:setAttributeValue(attribute, value) -> axuielementObject  | nil, errString</a>
+* <a href="#setTimeout">axuielement:setTimeout(value) -> axuielementObject | nil, errString</a>
 
 ##### Module Constants
 * <a href="#actions">axuielement.actions[]</a>
 * <a href="#attributes">axuielement.attributes[]</a>
-* <a href="#directions">axuielement.directions[]</a>
+* <a href="#orientations">axuielement.orientations[]</a>
 * <a href="#parameterizedAttributes">axuielement.parameterizedAttributes[]</a>
 * <a href="#roles">axuielement.roles[]</a>
+* <a href="#rulerMarkers">axuielement.rulerMarkers[]</a>
+* <a href="#sortDirections">axuielement.sortDirections[]</a>
 * <a href="#subroles">axuielement.subroles[]</a>
+* <a href="#units">axuielement.units[]</a>
 
 - - -
 
@@ -81,10 +85,13 @@ axuielement.applicationElement(applicationObject) -> axuielementObject
 Returns the top-level accessibility object for the application specified by the `hs.application` object.
 
 Parameters:
- * `applicationObject` - the `hs.application` object for the Application.
+ * `applicationObject` - the `hs.application` object for the Application or a string or number which will be passed to `hs.application.find` to get an `hs.application` object.
 
 Returns:
  * an axuielementObject for the application specified
+
+Notes:
+ * if `applicationObject` is a string or number, only the first item found with `hs.application.find` will be used by this function to create an axuielementObject.
 
 - - -
 
@@ -104,7 +111,7 @@ Returns:
 
 <a name="systemElementAtPosition"></a>
 ~~~lua
-axuielement.systemElementAtPosition(x, y | { x, y }) -> axuielementObject
+axuielement.systemElementAtPosition(x, y | pointTable) -> axuielementObject
 ~~~
 Returns the accessibility object at the specified position on the screen. The top-left corner of the primary screen is 0, 0.
 
@@ -143,16 +150,19 @@ axuielement.windowElement(windowObject) -> axuielementObject
 Returns the accessibility object for the window specified by the `hs.window` object.
 
 Parameters:
- * `windowObject` - the `hs.window` object for the window.
+ * `windowObject` - the `hs.window` object for the window or a string or number which will be passed to `hs.window.find` to get an `hs.window` object.
 
 Returns:
  * an axuielementObject for the window specified
+
+Notes:
+ * if `windowObject` is a string or number, only the first item found with `hs.window.find` will be used by this function to create an axuielementObject.
 
 ### Module Methods
 
 <a name="actionDescription"></a>
 ~~~lua
-axuielement:actionDescription(action) -> string
+axuielement:actionDescription(action) -> string | nil, errString
 ~~~
 Returns a localized description of the specified accessibility object's action.
 
@@ -160,7 +170,7 @@ Parameters:
  * `action` - the name of the action, as specified by [hs.axuielement:actionNames](#actionNames).
 
 Returns:
- * a string containing a description of the object's action
+ * a string containing a description of the object's action, nil if no description is available, or nil and an error string if an accessibility error occurred
 
 Notes:
  * The action descriptions are provided by the target application; as such their accuracy and usefulness rely on the target application's developers.
@@ -169,7 +179,7 @@ Notes:
 
 <a name="actionNames"></a>
 ~~~lua
-axuielement:actionNames() -> table
+axuielement:actionNames() -> table | nil, errString
 ~~~
 Returns a list of all the actions the specified accessibility object can perform.
 
@@ -177,7 +187,7 @@ Parameters:
  * None
 
 Returns:
- * an array of the names of all actions supported by the axuielementObject
+ * an array of the names of all actions supported by the axuielementObject or nil and an error string if an accessibility error occurred
 
 Notes:
  * Common action names can be found in the [hs.axuielement.actions](#actions) table; however, this method will list only those names which are supported by this object, and is not limited to just those in the referenced table.
@@ -186,7 +196,7 @@ Notes:
 
 <a name="allAttributeValues"></a>
 ~~~lua
-axuielement:allAttributeValues([includeErrors]) -> table
+axuielement:allAttributeValues([includeErrors]) -> table | nil, errString
 ~~~
 Returns a table containing key-value pairs for all attributes of the accessibility object.
 
@@ -194,7 +204,7 @@ Parameters:
  * `includeErrors` - an optional boolean, default false, that specifies whether attribute names which generate an error when retrieved are included in the returned results.
 
 Returns:
- * a table with key-value pairs corresponding to the attributes of the accessibility object.
+ * a table with key-value pairs corresponding to the attributes of the accessibility object or nil and an error string if an accessibility error occurred
 
 - - -
 
@@ -204,7 +214,7 @@ axuielement:allChildElements(callback, [withParents]) -> elementSearchObject
 ~~~
 Query the accessibility object for all child accessibility objects (and their children...).
 
-Paramters:
+Parameters:
  * `callback`    - a required function which should expect two arguments: a `msg` string specifying how the search ended, and a table containing the discovered child elements. `msg` will be "completed" when the traversal has completed normally and will contain a string starting with "**" if it terminates early for some reason (see Notes: section for more information)
  * `withParents` - an optional boolean, default false, indicating that the parent of objects (and their children) should be collected as well.
 
@@ -252,7 +262,7 @@ Notes:
 
 <a name="attributeNames"></a>
 ~~~lua
-axuielement:attributeNames() -> table
+axuielement:attributeNames() -> table | nil, errString
 ~~~
 Returns a list of all the attributes supported by the specified accessibility object.
 
@@ -260,7 +270,7 @@ Parameters:
  * None
 
 Returns:
- * an array of the names of all attributes supported by the axuielementObject
+ * an array of the names of all attributes supported by the axuielementObject or nil and an error string if an accessibility error occurred
 
 Notes:
  * Common attribute names can be found in the [hs.axuielement.attributes](#attributes) tables; however, this method will list only those names which are supported by this object, and is not limited to just those in the referenced table.
@@ -269,7 +279,7 @@ Notes:
 
 <a name="attributeValue"></a>
 ~~~lua
-axuielement:attributeValue(attribute) -> value
+axuielement:attributeValue(attribute) -> value | nil, errString
 ~~~
 Returns the value of an accessibility object's attribute.
 
@@ -277,13 +287,13 @@ Parameters:
  * `attribute` - the name of the attribute, as specified by [hs.axuielement:attributeNames](#attributeNames).
 
 Returns:
- * the current value of the attribute, or nil if the attribute has no value
+ * the current value of the attribute, nil if the attribute has no value, or nil and an error string if an accessibility error occurred
 
 - - -
 
 <a name="attributeValueCount"></a>
 ~~~lua
-axuielement:attributeValueCount(attribute) -> integer
+axuielement:attributeValueCount(attribute) -> integer | nil, errString
 ~~~
 Returns the count of the array of an accessibility object's attribute value.
 
@@ -291,7 +301,7 @@ Parameters:
  * `attribute` - the name of the attribute, as specified by [hs.axuielement:attributeNames](#attributeNames).
 
 Returns:
- * the number of items in the value for the attribute, if it is an array, or nil if the value is not an array.
+ * the number of items in the value for the attribute, if it is an array, or nil and an error string if an accessibility error occurred
 
 - - -
 
@@ -310,7 +320,7 @@ Returns:
  * an elementSearchObject as described in [hs.axuielement:elementSearch](#elementSearch)
 
 Notes:
- * The format of the `results` table passed to the callback for this method is primarily for debugging and exploratory purposes and may not be arranged for easy programatic evaluation.
+* The format of the `results` table passed to the callback for this method is primarily for debugging and exploratory purposes and may not be arranged for easy programatic evaluation.
 
  * This method is syntactic sugar for `hs.axuielement:elementSearch(callback, { objectOnly = false, asTree = true, [depth = depth], [includeParents = withParents] })`. Please refer to [hs.axuielement:elementSearch](#elementSearch) for details about the returned object and callback arguments.
 
@@ -349,7 +359,7 @@ Notes:
 
 <a name="elementAtPosition"></a>
 ~~~lua
-axuielement:elementAtPosition(x, y | { x, y }) -> axuielementObject
+axuielement:elementAtPosition(x, y | pointTable) -> axuielementObject | nil, errString
 ~~~
 Returns the accessibility object at the specified position on the screen. The top-left corner of the primary screen is 0, 0.
 
@@ -358,7 +368,7 @@ Parameters:
  * `pointTable` - the x and y coordinates of the screen location to test, provided as a point-table, like the one returned by `hs.mouse.getAbsolutePosition`. A point-table is a table with key-value pairs for keys `x` and `y`.
 
 Returns:
- * an axuielementObject for the object at the specified coordinates, or nil if no object could be identified.
+ * an axuielementObject for the object at the specified coordinates, or nil and an error string if no object could be identified or an accessibility error occurred
 
 Notes:
  * This method can only be called on an axuielementObject that represents an application or the system-wide element (see [hs.axuielement.systemWideElement](#systemWideElement)).
@@ -422,7 +432,7 @@ Notes:
 
 <a name="isAttributeSettable"></a>
 ~~~lua
-axuielement:isAttributeSettable(attribute) -> boolean
+axuielement:isAttributeSettable(attribute) -> boolean | nil, errString
 ~~~
 Returns whether the specified accessibility object's attribute can be modified.
 
@@ -430,13 +440,13 @@ Parameters:
  * `attribute` - the name of the attribute, as specified by [hs.axuielement:attributeNames](#attributeNames).
 
 Returns:
- * a boolean value indicating whether or not the value of the parameter can be modified.
+ * a boolean value indicating whether or not the value of the parameter can be modified or nil and an error string if an accessibility error occurred
 
 - - -
 
 <a name="isValid"></a>
 ~~~lua
-axuielement:isValid() -> boolean
+axuielement:isValid() -> boolean | nil, errString
 ~~~
 Returns whether the specified accessibility object is still valid.
 
@@ -444,7 +454,7 @@ Parameters:
  * None
 
 Returns:
- * a boolean value indicating whether or not the accessibility object is still valid.
+ * a boolean value indicating whether or not the accessibility object is still valid or nil and an error string if any other accessibility error occurred
 
 Notes:
  * an accessibilityObject can become invalid for a variety of reasons, including but not limited to the element referred to no longer being available (e.g. an element referring to a window or one of its children that has been closed) or the application terminating.
@@ -457,7 +467,7 @@ axuielement:matchesCriteria(criteria, [isPattern]) -> boolean
 ~~~
 Returns true if the axuielementObject matches the specified criteria or false if it does not.
 
-Paramters:
+Parameters:
  * `criteria`  - the criteria to compare against the accessibility object
  * `isPattern` - an optional boolean, default false, specifying whether or not the strings in the search criteria should be considered as Lua patterns (true) or as absolute string matches (false).
 
@@ -472,14 +482,16 @@ Notes:
    * a table of key-value pairs specifying a more complex match criteria.  This table will be evaluated as follows:
      * each key-value pair is treated as a separate test and the object *must* match as true for all tests
      * each key is a string specifying an attribute to evaluate.  This attribute may be specified with its formal name (e.g. "AXRole") or the informal version (e.g. "role" or "Role").
-     * each value may be a string, a number, a boolean, or an axuielementObject userdata object, or an array (table) of such.  If the value is an array, then the test will match as true if the object matches any of the supplied values for the attribute specified by the key.
+     * each value may be a string, a number, a boolean, or an axuielementObject userdata object, or an array (table) of such.  If the value is an array, then the test will match as true if the object matches any of the supplied values for the attribute specified by the key. To specify a value of `nil`, use the boolean `false`.
        * Put another way: key-value pairs are "and'ed" together while the values for a specific key-value pair are "or'ed" together.
+
+ * This method is used by [hs.axuielement:elementSearch](#elementSearch) when a criteria is specified.
 
 - - -
 
 <a name="parameterizedAttributeNames"></a>
 ~~~lua
-axuielement:parameterizedAttributeNames() -> table
+axuielement:parameterizedAttributeNames() -> table | nil, errString
 ~~~
 Returns a list of all the parameterized attributes supported by the specified accessibility object.
 
@@ -487,22 +499,25 @@ Parameters:
  * None
 
 Returns:
- * an array of the names of all parameterized attributes supported by the axuielementObject
+ * an array of the names of all parameterized attributes supported by the axuielementObject or nil and an error string if an accessibility error occurred
 
 - - -
 
 <a name="parameterizedAttributeValue"></a>
 ~~~lua
-axuielement:parameterizedAttributeValue(attribute, parameter) -> value
+axuielement:parameterizedAttributeValue(attribute, parameter) -> value | nil, errString
 ~~~
 Returns the value of an accessibility object's parameterized attribute.
 
 Parameters:
  * `attribute` - the name of the attribute, as specified by [hs.axuielement:parameterizedAttributeNames](#parameterizedAttributeNames).
- * `parameter` - the parameter
+ * `parameter` - the parameter required by the paramaterized attribute.
 
 Returns:
- * the current value of the parameterized attribute, or nil if it has no value
+ * the current value of the parameterized attribute, nil if the parameterized attribute has no value, or nil and an error string if an accessibility error occurred
+
+Notes:
+ * The specific parameter required for a each parameterized attribute is different and may even be application specific thus requiring some experimentation. Notes regarding identified parameter types and thoughts on some still being investigated will be provided in the Hammerspoon Wiki, hopefully shortly after this module becomes part of a Hammerspoon release.
 
 - - -
 
@@ -519,7 +534,7 @@ Returns:
  * a table containing this object and 0 or more parent objects representing the path from the root object to this element.
 
 Notes:
- * this object will always exist as the last element in the table (e.g. at `table[#table]`) with its most imemdiate parent at `#table - 1`, etc. until the rootmost object for this element is reached at index position 1.
+ * this object will always exist as the last element in the table (e.g. at `table[#table]`) with its most immediate parent at `#table - 1`, etc. until the rootmost object for this element is reached at index position 1.
 
  * an axuielement object representing an application or the system wide object is its own rootmost object and will return a table containing only itself (i.e. `#table` will equal 1)
 
@@ -527,7 +542,7 @@ Notes:
 
 <a name="performAction"></a>
 ~~~lua
-axuielement:performAction(action) -> axuielement | false | nil
+axuielement:performAction(action) -> axuielement | false | nil, errString
 ~~~
 Requests that the specified accessibility object perform the specified action.
 
@@ -535,7 +550,7 @@ Parameters:
  * `action` - the name of the action, as specified by [hs.axuielement:actionNames](#actionNames).
 
 Returns:
- * if the requested action was accepted by the target, returns the axuielementObject; if the requested action was rejected, returns false, otherwise returns nil on error.
+ * if the requested action was accepted by the target, returns the axuielementObject; if the requested action was rejected, returns false; otherwise returns nil and an error string if an accessibility error occurred
 
 Notes:
  * The return value only suggests success or failure, but is not a guarantee.  The receiving application may have internal logic which prevents the action from occurring at this time for some reason, even though this method returns success (the axuielementObject).  Contrawise, the requested action may trigger a requirement for a response from the user and thus appear to time out, causing this method to return false or nil.
@@ -544,7 +559,7 @@ Notes:
 
 <a name="pid"></a>
 ~~~lua
-axuielement:pid() -> integer
+axuielement:pid() -> integer | nil, errString
 ~~~
 Returns the process ID associated with the specified accessibility object.
 
@@ -552,13 +567,13 @@ Parameters:
  * None
 
 Returns:
- * the process ID for the application to which the accessibility object ultimately belongs.
+ * the process ID for the application to which the accessibility object ultimately belongs or nil and an error string if an accessibility error occurred
 
 - - -
 
 <a name="setAttributeValue"></a>
 ~~~lua
-axuielement:setAttributeValue(attribute, value) -> axuielementObject | nil
+axuielement:setAttributeValue(attribute, value) -> axuielementObject  | nil, errString
 ~~~
 Sets the accessibility object's attribute to the specified value.
 
@@ -567,7 +582,7 @@ Parameters:
  * `value`     - the value to assign to the attribute
 
 Returns:
- * the axuielementObject on success; nil if the attribute could not be set.
+ * the axuielementObject on success; nil and an error string if the attribute could not be set or an accessibility error occurred.
 
 Notes:
  * This is still somewhat experimental and needs more testing; use with caution.
@@ -576,15 +591,15 @@ Notes:
 
 <a name="setTimeout"></a>
 ~~~lua
-axuielement:setTimeout(value) -> axuielementObject
+axuielement:setTimeout(value) -> axuielementObject | nil, errString
 ~~~
 Sets the timeout value used accessibility queries performed from this element.
 
 Parameters:
- * `value` - the number of seconds for the new timeout value.
+ * `value` - the number of seconds for the new timeout value. Must be 0 or positive.
 
 Returns:
- * the axuielementObject
+ * the axuielementObject or nil and an error string if an accessibility error occurred
 
 Notes:
  * To change the global timeout affecting all queries on elements which do not have a specific timeout set, use this method on the systemwide element (see [hs.axuielement.systemWideElement](#systemWideElement).
@@ -602,6 +617,7 @@ A table of common accessibility object action names, provided for reference.
 
 Notes:
  * this table is provided for reference only and is not intended to be comprehensive.
+ * you can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.actions`
 
 - - -
 
@@ -609,42 +625,23 @@ Notes:
 ~~~lua
 axuielement.attributes[]
 ~~~
-A table of common accessibility object attribute names, provided for reference. The names are grouped into the following subcategories (keys):
-
- * `application`
- * `attributedStrings`
- * `cell`
- * `dock`
- * `general`
- * `grid`
- * `layout`
- * `level`
- * `matte`
- * `menu`
- * `misc`
- * `obsolete`
- * `outline`
- * `ruler`
- * `searchField`
- * `system`
- * `table`
- * `text`
- * `window`
+A table of common accessibility object attribute names which may be used with [hs.axuielement:elementSearch](#elementSearch) or [hs.axuielement:matchesCriteria](#matchesCriteria) as keys in the match criteria argument.
 
 Notes:
- * this table is provided for reference only and is not intended to be comprehensive.
- * the category name suggests the type of accessibility object likely to contain the member elements.
+ * This table is provided for reference only and is not intended to be comprehensive.
+ * You can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.attributes`
 
 - - -
 
-<a name="directions"></a>
+<a name="orientations"></a>
 ~~~lua
-axuielement.directions[]
+axuielement.orientations[]
 ~~~
-A table of common directions which may be specified as the value of an accessibility object property, provided for reference.
+A table of orientation types which may be used with [hs.axuielement:elementSearch](#elementSearch) or [hs.axuielement:matchesCriteria](#matchesCriteria) as attribute values for "AXOrientation" in the match criteria argument.
 
 Notes:
- * this table is provided for reference only and is not intended to be comprehensive.
+ * this table is provided for reference only and may not be comprehensive.
+ * you can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.orientations`
 
 - - -
 
@@ -656,6 +653,11 @@ A table of common accessibility object parameterized attribute names, provided f
 
 Notes:
  * this table is provided for reference only and is not intended to be comprehensive.
+ * you can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.parameterizedAttributes`
+
+ * Parameterized attributes are attributes that take an argument when querying the element. There is very little documentation available for most of these and application developers can implement their own for which we may never be able to get any documentation. This table contains parameterized attribute names that are defined within the Apple documentation and a few others that have been discovered.
+
+ * Documentation covering what has been discovered through experimentation about paramterized attributes is planned and should be added to the Hammerspoon wiki shortly after this module becomes part of a formal release.
 
 - - -
 
@@ -663,10 +665,35 @@ Notes:
 ~~~lua
 axuielement.roles[]
 ~~~
-A table of common accessibility object roles, provided for reference.
+A table of common accessibility object roles which may be used with [hs.axuielement:elementSearch](#elementSearch) or [hs.axuielement:matchesCriteria](#matchesCriteria) as attribute values for "AXRole" in the match criteria argument.
 
 Notes:
  * this table is provided for reference only and is not intended to be comprehensive.
+ * you can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.roles`
+
+- - -
+
+<a name="rulerMarkers"></a>
+~~~lua
+axuielement.rulerMarkers[]
+~~~
+A table of ruler marker types which may be used with [hs.axuielement:elementSearch](#elementSearch) or [hs.axuielement:matchesCriteria](#matchesCriteria) as attribute values for "AXMarkerType" in the match criteria argument.
+
+Notes:
+ * this table is provided for reference only and may not be comprehensive.
+ * you can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.rulerMarkers`
+
+- - -
+
+<a name="sortDirections"></a>
+~~~lua
+axuielement.sortDirections[]
+~~~
+A table of sort direction types which may be used with [hs.axuielement:elementSearch](#elementSearch) or [hs.axuielement:matchesCriteria](#matchesCriteria) as attribute values for "AXSortDirection" in the match criteria argument.
+
+Notes:
+ * this table is provided for reference only and may not be comprehensive.
+ * you can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.sortDirections`
 
 - - -
 
@@ -674,10 +701,23 @@ Notes:
 ~~~lua
 axuielement.subroles[]
 ~~~
-A table of common accessibility object subroles, provided for reference.
+A table of common accessibility object subroles which may be used with [hs.axuielement:elementSearch](#elementSearch) or [hs.axuielement:matchesCriteria](#matchesCriteria) as attribute values for "AXSubrole" in the match criteria argument.
 
 Notes:
  * this table is provided for reference only and is not intended to be comprehensive.
+ * you can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.subroles`
+
+- - -
+
+<a name="units"></a>
+~~~lua
+axuielement.units[]
+~~~
+A table of measurement unit types which may be used with [hs.axuielement:elementSearch](#elementSearch) or [hs.axuielement:matchesCriteria](#matchesCriteria) as attribute values for attributes which specify measurement unit types (e.g. "AXUnits", "AXHorizontalUnits", and "AXVerticalUnits") in the match criteria argument.
+
+Notes:
+ * this table is provided for reference only and may not be comprehensive.
+ * you can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.units`
 
 - - -
 
@@ -693,4 +733,5 @@ Notes:
 >
 > THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 >
+
 
