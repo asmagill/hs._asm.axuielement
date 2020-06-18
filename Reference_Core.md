@@ -37,6 +37,9 @@ axuielement = require("hs.axuielement")
 * <a href="#systemWideElement">axuielement.systemWideElement() -> axuielementObject</a>
 * <a href="#windowElement">axuielement.windowElement(windowObject) -> axuielementObject</a>
 
+##### Module Functions
+* <a href="#searchCriteriaFunction">axuielement.searchCriteriaFunction(criteria) -> function</a>
+
 ##### Module Methods
 * <a href="#actionDescription">axuielement:actionDescription(action) -> string | nil, errString</a>
 * <a href="#actionNames">axuielement:actionNames() -> table | nil, errString</a>
@@ -54,7 +57,7 @@ axuielement = require("hs.axuielement")
 * <a href="#elementSearch">axuielement:elementSearch(callback, [criteria], [namedModifiers]) -> elementSearchObject</a>
 * <a href="#isAttributeSettable">axuielement:isAttributeSettable(attribute) -> boolean | nil, errString</a>
 * <a href="#isValid">axuielement:isValid() -> boolean | nil, errString</a>
-* <a href="#matchesCriteria">axuielement:matchesCriteria(criteria, [isPattern]) -> boolean</a>
+* <a href="#matchesCriteria">axuielement:matchesCriteria(criteria) -> boolean</a>
 * <a href="#parameterizedAttributeNames">axuielement:parameterizedAttributeNames() -> table | nil, errString</a>
 * <a href="#parameterizedAttributeValue">axuielement:parameterizedAttributeValue(attribute, parameter) -> value | nil, errString</a>
 * <a href="#path">axuielement:path() -> table</a>
@@ -157,6 +160,20 @@ Returns:
 
 Notes:
  * if `windowObject` is a string or number, only the first item found with `hs.window.find` will be used by this function to create an axuielementObject.
+
+### Module Functions
+
+<a name="searchCriteriaFunction"></a>
+~~~lua
+axuielement.searchCriteriaFunction(criteria) -> function
+~~~
+Returns a function for use with [hs.axuielement:elementSearch](#elementSearch) that uses [hs.axuielement:matchesCriteria](#matchesCriteria) with the specified criteria.
+
+Parameters:
+ * `criteria` - a criteria definition as defined for the [hs.axuielement:matchesCriteria](#matchesCriteria) method.
+
+Returns:
+ * a function which can be used as the `criteriaFunction` for [hs.axuielement:elementSearch](#elementSearch).
 
 ### Module Methods
 
@@ -387,11 +404,10 @@ Search for and generate a table of the accessibility elements for the attributes
 
 Parameters:
  * `callback`       - a (usually) required function which will receive the results of this search. The callback should expect three arguments and return none. The arguments to the callback function will be `msg`, a string specifying how the search ended and `results`, the elementSearchObject containing the requested results, and the number of items added to the results (see `count` in `namedModifiers`). `msg` will be "completed" if the search completes normally, or a string starting with "**" if it is terminated early (see Returns: and Notes: for more details).
- * `criteria`       - an optional table or string which will be passed to [hs.axuielement:matchesCriteria](#matchesCriteria) to determine if the discovered element should be included in the final result set. This criteria does not prune the search, it just determines if the element will be included in the results.
+ * `criteria`       - an optional function which should accept one argument (the current element being examined) and return true if it should be included in the results or false if it should be rejected. See [hs.axuielement.searchCriteriaFunction](#searchCriteriaFunction) to create a search function that uses [hs.axuielement:matchesCriteria](#matchesCriteria) for evaluation.
  * `namedModifiers` - an optional table specifying key-value pairs that further modify or control the search. This table may contain 0 or more of the following keys:
    * `count`          - an optional integer, default `math.huge`, specifying the maximum number of matches to collect before ending the search and invoking the callback. You can continue the search to find additional elements by invoking `elementSearchObject:next()` (described below in the `Returns` section) on the return value of this method, or on the results argument passed to the callback.
    * `depth`          - an optional integer, default `math.huge`, specifying the maximum number of steps (children of children...) from the initial accessibility element the search should visit. If you know that your desired element(s) are relatively close to your starting element, setting this to a lower value can significantly speed up the search.
-   * `isPattern`      - a boolean, default false, specifying whether or not all string values in `criteria` should be evaluated as patterns (true) or as literal strings to be matched (false). This value is passed to [hs.axuielement:matchesCriteria](#matchesCriteria) when `criteria` is specified and has no effect otherwise.
 
    * The following are also recognized, but may impact the speed of the search, the responsiveness of Hammerspoon, or the format of the results in ways that limit further filtering and are not recommended except when you know that you require them:
      * `asTree`         - an optional boolean, default false, and ignored if `criteria` is specified and non-empty, `objectOnly` is true, or `count` is specified. This modifier specifies whether the search results should return as an array table of tables containing each element's details (false) or as a tree where in which the root node details are the key-value pairs of the returned table and child elements are likewise described in subtables attached to the attribute name they belong to (true). This format is primarily for debugging and exploratory purposes and may not be arranged for easy programatic evaluation.
@@ -403,17 +419,16 @@ Returns:
  * an elementSearchObject which contains metamethods allowing you to check to see if the process has completed and cancel it early if desired. The methods include:
    * `elementSearchObject:cancel([reason])` - cancels the current search and invokes the callback with the partial results already collected. If you specify `reason`, the `msg` parameter for the callback will be `** <reason>`; otherwise it will be "** cancelled".
    * `elementSearchObject:isRunning()`      - returns true if the search is currently ongoing or false if it has completed or been cancelled.
-   * `elementSearchObject:matched()`        - returns an integer specifying the number of elements which have already been found that meet the specified criteria.
+   * `elementSearchObject:matched()`        - returns an integer specifying the number of elements which have already been found that meet the specified criteria function.
    * `elementSearchObject:runTime()`        - returns an integer specifying the number of seconds spent performing this search. Note that this is *not* an accurate measure of how much time a given search will always take because the time will be greatly affected by how much other activity is occurring within Hammerspoon and on the users computer. Resuming a cancelled search or a search which invoked the callback because it reached `count` items with the `next` method (descibed below) will cause this number to begin increasing again to provide a cumulative total of time spent performing the search; time between when the callback is invoked and the `next` method is invoked is not included.
    * `elementSearchObject:visited()`        - returns an integer specifying the number of elements which have been examined during the search so far.
 
    * If `asTree` is false or not specified, the following additional methods will be available:
-     * `elementSearchObject:filter([criteria], [isPattern], [callback]) -> filterObject`
+     * `elementSearchObject:filter(criteria, [callback]) -> filterObject`
        * returns a new table containing elements in the search results that match the specified criteria.
-         * `criteria`  - an optional table or string which will be passed to [hs.axuielement:matchesCriteria](#matchesCriteria) to determine if the element should be included in the filtered result set.
-         * `isPattern` - an optional boolean, default false, specifying whether strings in the specified criteria should be treated as patterns (see [hs.axuielement:matchesCriteria](#matchesCriteria))
+         * `criteria`  - a required function which should accept one argument (the current element being examined) and return true if it should be included in the results or false if it should be rejected. See [hs.axuielement.searchCriteriaFunction](#searchCriteriaFunction) to create a search function that uses [hs.axuielement:matchesCriteria](#matchesCriteria) for evaluation.
          * `callback`  - an optional callback which should expect two arguments and return none. If a callback is specified, the callback will receive two arguments, a msg indicating how the callback ended (the message format matches the style defined for this method) and the filterObject which contains the matching elements.
-       * The filter object returned by this method and passed to the callback, if defined, will support the following methods as defined here: `cancel`, `filter`, `isRunning`, `matched`, `runTime`, and `visited`.
+       * The filterObject returned by this method and passed to the callback, if defined, will support the following methods as defined here: `cancel`, `filter`, `isRunning`, `matched`, `runTime`, and `visited`.
      * `elementSearchObject:next()` - if the search was cancelled or reached the count of matches specified, this method will continue the search where it left off. The elementSearchObject returned when the callback is next invoked will have up to `count` items added to the existing results (calls to `next` are cummulative for the total results captured in the elementSearchObject). The third ardument to the callback will be the number of items *added* to the search results, not the number of items *in* the search results.
 
 Notes:
@@ -421,7 +436,7 @@ Notes:
 
 * The search performed is a breadth-first search, so in general earlier elements in the results table will be "closer" in the Accessibility hierarchy to the starting point than later elements.
 
-* The `elementSearchObject` returned by this method and the results passed in as the second argument to the callback function are the same object -- you can use either one in your code depending upon which makes the most sense. Results that match the criteria are added to the `elementSearchObject` as they are found, so if you examine the object/table returned by this method and determine that you have located the element or elements you require before the callback has been invoked, you can safely invoke the cancel method to end the search early.
+* The `elementSearchObject` returned by this method and the results passed in as the second argument to the callback function are the same object -- you can use either one in your code depending upon which makes the most sense. Results that match the criteria function are added to the `elementSearchObject` as they are found, so if you examine the object/table returned by this method and determine that you have located the element or elements you require before the callback has been invoked, you can safely invoke the cancel method to end the search early.
 
 * If `objectsOnly` is specified as false, it may take some time after `cancel` is invoked for the mapping of element attribute tables to the child elements in the results set -- this is a by product of the need to iterate through the results to match up all of the instances of each element to it's attribute table.
 
@@ -463,29 +478,39 @@ Notes:
 
 <a name="matchesCriteria"></a>
 ~~~lua
-axuielement:matchesCriteria(criteria, [isPattern]) -> boolean
+axuielement:matchesCriteria(criteria) -> boolean
 ~~~
 Returns true if the axuielementObject matches the specified criteria or false if it does not.
 
 Parameters:
  * `criteria`  - the criteria to compare against the accessibility object
- * `isPattern` - an optional boolean, default false, specifying whether or not the strings in the search criteria should be considered as Lua patterns (true) or as absolute string matches (false).
 
 Returns:
  * true if the axuielementObject matches the criteria, false if it does not.
 
 Notes:
- * if `isPattern` is specified and is true, all string comparisons are done with `string.match`.  See the Lua manual, section 6.4.1 (`help.lua._man._6_4_1` in the Hammerspoon console).
  * the `criteria` parameter must be one of the following:
-   * a single string, specifying the AXRole value the axuielementObject's AXRole attribute must equal for the match to return true
-   * an array of strings, specifying a list of AXRoles for which the match should return true
-   * a table of key-value pairs specifying a more complex match criteria.  This table will be evaluated as follows:
-     * each key-value pair is treated as a separate test and the object *must* match as true for all tests
-     * each key is a string specifying an attribute to evaluate.  This attribute may be specified with its formal name (e.g. "AXRole") or the informal version (e.g. "role" or "Role").
-     * each value may be a string, a number, a boolean, or an axuielementObject userdata object, or an array (table) of such.  If the value is an array, then the test will match as true if the object matches any of the supplied values for the attribute specified by the key. To specify a value of `nil`, use the boolean `false`.
-       * Put another way: key-value pairs are "and'ed" together while the values for a specific key-value pair are "or'ed" together.
+   * a single string, specifying the value the element's AXRole attribute must equal for a positive match
 
- * This method is used by [hs.axuielement:elementSearch](#elementSearch) when a criteria is specified.
+   * an array table of strings specifying a list of possible values the element's AXRole attribute can equal for a positive match
+
+   * a table of key-value pairs specifying a more complex criteria. The table should be defined as follows:
+     * one or more of the following must be specified (though all specified must match):
+       * `attribute`              -- a string, or table of strings, specifying attributes that the element must support. Strings may be specified with their formal name (e.g. "AXSomething") or informal name (e.g. "something" or "Something").
+       * `action`                 -- a string, or table of strings, specifying actions that the element must be able to perform. Strings may be specified with their formal name (e.g. "AXSomething") or informal name (e.g. "something" or "Something").
+       * `parameterizedAttribute` -- a string, or table of strings, specifying parametrized attributes that the element must support. Strings may be specified with their formal name (e.g. "AXSomething") or informal name (e.g. "something" or "Something").
+
+     * if the `attribute` key is specified, you can use one of the the following to specify a specific value the attribute must equal for a positive match. No more than one of these should be provided. If neither are present, then only the existence of the attributes specified by `attribute` are required.
+       * `value`                  -- a value, or table of values, that a specifeid attribute must equal. If it's a table, then only one of the values has to match the attribute value for a positive match. Note that if you specify more than one attribute with the `attribute` key, you must provide at least one value for each attribute in this table (order does not matter, but the match will fail if any atrribute does not match at least one value provided).
+       * `nilValue`               -- a boolean, specifying that the attributes must not have an assigned value (true) or may be assigned any value except nil (false). If the `value` key is specified, this key is ignored. Note that this applies to *all* of the attributes specified with the `attribute` key.
+
+     * the following are optional keys and are not required:
+       * `pattern`                -- a boolean, default false, specifying whether string matches for attribute values should be evaluated with `string.match` (true) or as exact matches (false). See the Lua manual, section 6.4.1 (`help.lua._man._6_4_1` in the Hammerspoon console). If the `value` key is not set, than this key is ignored.
+       * `invert`                 -- a boolean, default false, specifying inverted logic for the criteria result --- if this is true and the criteria matches, evaluate criteria as false; otherwise evaluate as true.
+
+   * an array table of one or more key-value tables as described immediately above; the element must be a positive match for all of the individual criteria tables specified (logical AND).
+
+ * This method is used by [hs.axuielement.searchCriteriaFunction](#searchCriteriaFunction) to create criteria functions compatible with [hs.axuielement:elementSearch](#elementSearch).
 
 - - -
 

@@ -274,61 +274,186 @@ objectMT.path = function(self)
     return results
 end
 
---- hs.axuielement:matchesCriteria(criteria, [isPattern]) -> boolean
+local tableCopyNoMT
+tableCopyNoMT = function(t, seen)
+    if type(t) ~= "table" then return t end
+    seen = seen or {}
+    local copy = {}
+    seen[t] = copy
+    for k,v in pairs(t) do
+        copy[k] = (type(v) == "table") and (seen[v] or tableCopyNoMT(v, seen)) or v
+    end
+    return copy
+end
+
+--- hs.axuielement:matchesCriteria(criteria) -> boolean
 --- Method
 --- Returns true if the axuielementObject matches the specified criteria or false if it does not.
 ---
 --- Parameters:
 ---  * `criteria`  - the criteria to compare against the accessibility object
----  * `isPattern` - an optional boolean, default false, specifying whether or not the strings in the search criteria should be considered as Lua patterns (true) or as absolute string matches (false).
 ---
 --- Returns:
 ---  * true if the axuielementObject matches the criteria, false if it does not.
 ---
 --- Notes:
----  * if `isPattern` is specified and is true, all string comparisons are done with `string.match`.  See the Lua manual, section 6.4.1 (`help.lua._man._6_4_1` in the Hammerspoon console).
 ---  * the `criteria` parameter must be one of the following:
----    * a single string, specifying the AXRole value the axuielementObject's AXRole attribute must equal for the match to return true
----    * an array of strings, specifying a list of AXRoles for which the match should return true
----    * a table of key-value pairs specifying a more complex match criteria.  This table will be evaluated as follows:
----      * each key-value pair is treated as a separate test and the object *must* match as true for all tests
----      * each key is a string specifying an attribute to evaluate.  This attribute may be specified with its formal name (e.g. "AXRole") or the informal version (e.g. "role" or "Role").
----      * each value may be a string, a number, a boolean, or an axuielementObject userdata object, or an array (table) of such.  If the value is an array, then the test will match as true if the object matches any of the supplied values for the attribute specified by the key. To specify a value of `nil`, use the boolean `false`.
----        * Put another way: key-value pairs are "and'ed" together while the values for a specific key-value pair are "or'ed" together.
-objectMT.matchesCriteria = function(self, criteria, isPattern)
-    isPattern = isPattern or false
-    if type(criteria) == "string" or #criteria > 0 then criteria = { role = criteria } end
-    local answer = nil
-    if getmetatable(self) == objectMT then
-        answer = true
-        local values = self:allAttributeValues(true) or {}
-        for k, v in pairs(criteria) do
-            local formalName = k:match("^AX[%w_]+$") and k or "AX"..k:sub(1,1):upper()..k:sub(2)
-            local result = values[formalName]
-            if type(result) == "table" and result._code == -25212 then
-                result = false -- nil can't be a value in the criteria, so we match it to false instead
+---    * a single string, specifying the value the element's AXRole attribute must equal for a positive match
+---
+---    * an array table of strings specifying a list of possible values the element's AXRole attribute can equal for a positive match
+---
+---    * a table of key-value pairs specifying a more complex criteria. The table should be defined as follows:
+---      * one or more of the following must be specified (though all specified must match):
+---        * `attribute`              -- a string, or table of strings, specifying attributes that the element must support. Strings may be specified with their formal name (e.g. "AXSomething") or informal name (e.g. "something" or "Something").
+---        * `action`                 -- a string, or table of strings, specifying actions that the element must be able to perform. Strings may be specified with their formal name (e.g. "AXSomething") or informal name (e.g. "something" or "Something").
+---        * `parameterizedAttribute` -- a string, or table of strings, specifying parametrized attributes that the element must support. Strings may be specified with their formal name (e.g. "AXSomething") or informal name (e.g. "something" or "Something").
+---
+---      * if the `attribute` key is specified, you can use one of the the following to specify a specific value the attribute must equal for a positive match. No more than one of these should be provided. If neither are present, then only the existence of the attributes specified by `attribute` are required.
+---        * `value`                  -- a value, or table of values, that a specifeid attribute must equal. If it's a table, then only one of the values has to match the attribute value for a positive match. Note that if you specify more than one attribute with the `attribute` key, you must provide at least one value for each attribute in this table (order does not matter, but the match will fail if any atrribute does not match at least one value provided).
+---        * `nilValue`               -- a boolean, specifying that the attributes must not have an assigned value (true) or may be assigned any value except nil (false). If the `value` key is specified, this key is ignored. Note that this applies to *all* of the attributes specified with the `attribute` key.
+---
+---      * the following are optional keys and are not required:
+---        * `pattern`                -- a boolean, default false, specifying whether string matches for attribute values should be evaluated with `string.match` (true) or as exact matches (false). See the Lua manual, section 6.4.1 (`help.lua._man._6_4_1` in the Hammerspoon console). If the `value` key is not set, than this key is ignored.
+---        * `invert`                 -- a boolean, default false, specifying inverted logic for the criteria result --- if this is true and the criteria matches, evaluate criteria as false; otherwise evaluate as true.
+---
+---    * an array table of one or more key-value tables as described immediately above; the element must be a positive match for all of the individual criteria tables specified (logical AND).
+---
+---  * This method is used by [hs.axuielement.searchCriteriaFunction](#searchCriteriaFunction) to create criteria functions compatible with [hs.axuielement:elementSearch](#elementSearch).
+objectMT.matchesCriteria = function(self, criteria)
+    if type(criteria) == "string" then
+        criteria = { attribute = "AXRole", value = criteria }
+    elseif type(criteria) == "table" and #criteria > 0 then
+        local allStrings = true
+        for i,v in ipairs(criteria) do
+            if type(v) ~= "string" then
+                allStrings = false
+                break
             end
-
-            if type(v) ~= "table" then v = { v } end
-            local partialAnswer = false
-            for _, v2 in ipairs(v) do
-                if type(v2) == type(result) then
-                    if type(v2) == "string" then
-                        partialAnswer = partialAnswer or (not isPattern and result == v2) or (isPattern and result:match(v2))
-                    elseif type(v2) == "number" or type(v2) == "boolean" or getmetatable(v2) == objectMT then
-                        partialAnswer = partialAnswer or (result == v2)
-                    else
-                        local dbg = debug.getinfo(2)
-                        log.wf("%s:%d: unable to compare type '%s' in criteria", dbg.short_src, dbg.currentline, type(v2))
-                    end
-                end
-                if partialAnswer then break end
-            end
-            answer = partialAnswer
-            if not answer then break end
+        end
+        if allStrings then
+            criteria = { attribute = "AXRole", value = criteria }
         end
     end
-    return answer and true or false
+
+    assert(type(criteria) == "table", "expected table defining criteria")
+
+    if #criteria == 0 then criteria = { criteria } end
+    -- prior to this we've made no changes to a table that's been passed to us
+    criteria = tableCopyNoMT(criteria)
+    -- "clean" criteria tables to simplify actual evaluation
+    local criteriaKeys = {
+        attribute              = true,
+        action                 = true,
+        parameterizedAttribute = true,
+        value                  = true,
+        nilValue               = true,
+        pattern                = true,
+        invert                 = true,
+    }
+
+    for idx,thisCriteria in ipairs(criteria) do
+        assert(
+            type(thisCriteria) == "table",
+            "expected table of tables defining criteria; found " .. type(thisCriteria) .. " at index " .. tostring(idx)
+        )
+        for k,_ in pairs(thisCriteria) do
+            assert(criteriaKeys[k], tostring(k) .. " is not a recognized criteria key")
+        end
+
+        if thisCriteria.attribute then
+            if type(thisCriteria.attribute) ~= "table" then thisCriteria.attribute = { thisCriteria.attribute } end
+            -- convert to formal versions of attribute names, if they aren't already (i.a. AXAttribtue)
+            for i,v in ipairs(thisCriteria.attribute) do
+                if not v:match("^AX") then
+                    thisCriteria.attribute[i] = "AX" .. v:sub(1,1):upper() .. v:sub(2,-1)
+                end
+            end
+        end
+        if thisCriteria.action then
+            if type(thisCriteria.action) ~= "table" then thisCriteria.action = { thisCriteria.action } end
+            -- convert to formal versions of action names, if they aren't already (i.a. AXAction)
+            for i,v in ipairs(thisCriteria.action) do
+                if not v:match("^AX") then
+                    thisCriteria.action[i] = "AX" .. v:sub(1,1):upper() .. v:sub(2,-1)
+                end
+            end
+        end
+        if thisCriteria.parameterizedAttribute then
+            if type(thisCriteria.parameterizedAttribute) ~= "table" then thisCriteria.parameterizedAttribute = { thisCriteria.parameterizedAttribute } end
+            -- convert to formal versions of parameterizedAttribute names, if they aren't already (i.a. AXParameterizedAttribute)
+            for i,v in ipairs(thisCriteria.parameterizedAttribute) do
+                if not v:match("^AX") then
+                    thisCriteria.parameterizedAttribute[i] = "AX" .. v:sub(1,1):upper() .. v:sub(2,-1)
+                end
+            end
+        end
+        if thisCriteria.value then
+            if type(thisCriteria.value) ~= "table" then thisCriteria.value = { thisCriteria.value } end
+            -- values can be anything, so we make no changes...
+        end
+    end
+
+    -- now on to the actual evaluation
+    local finalResult = true
+    local aav = self:allAttributeValues(true)      or {}
+    local apa = self:parameterizedAttributeNames() or {}
+    local aan = self:actionNames()                 or {}
+
+    for _,thisCriteria in ipairs(criteria) do
+        local thisResult = true
+        if thisCriteria.attribute then
+            for i,v in ipairs(thisCriteria.attribute) do
+                if type(aav[v]) == "nil" then
+                    thisResult = false
+                    break
+                end
+            end
+        end
+        if thisResult and thisCriteria.action then
+            for i,v in ipairs(thisCriteria.action) do
+                if not fnutils.contains(aan, v) then
+                    thisResult = false
+                    break
+                end
+            end
+        end
+        if thisResult and thisCriteria.parameterizedAttribute then
+            for i,v in ipairs(thisCriteria.parameterizedAttribute) do
+                if not fnutils.contains(apa, v) then
+                    thisResult = false
+                    break
+                end
+            end
+        end
+
+        if thisResult then
+            if thisCriteria.value then
+                for _,v in ipairs(thisCriteria.attribute) do
+                    local ans, found = aav[v], false
+                    for _, v2 in ipairs(thisCriteria.value) do
+                        if type(v2) == "string" and type(ans) == "string" and thisCriteria.pattern then
+                            found = ans:match(v2) and true or false
+                        else
+                            found = ans == v2
+                        end
+                        if found then break end
+                    end
+                    thisResult = found
+                    if not thisResult then break end
+                end
+            elseif type(thisCriteria.nilValue) ~= "nil" then
+                for i,v in ipairs(thisCriteria.attribute) do
+                    thisResult = thisCriteria.nilValue == ((type(aav[v]) == "table") and (aav[v]._code == -25212))
+                    if not thisResult then break end
+                end
+            end
+        end
+
+        if thisCriteria.invert then thisResult = not thisResult end
+        finalResult = thisResult -- and finalResult, but logically it's the same without the additional code
+        if not finalResult then break end
+    end
+    return finalResult
 end
 
 --- hs.axuielement.searchCriteriaFunction(criteria) -> function

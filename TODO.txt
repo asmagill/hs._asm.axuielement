@@ -2,7 +2,7 @@ TODO:
 
 Before Landing:
 
-      rewrite matchesCriteria as defined at bottom of this
+*     rewrite matchesCriteria as defined at bottom of this
 
 *     elementSearch and filter criteria should be a function (to allow more complex possibilities than matchesCriteria can, even with new syntax)
 
@@ -35,61 +35,3 @@ Long Term:
       hs._coresetup/hs.logger modify LuaSkin delegate to check begining of string for "^hs.[%w_]+" and see if logger already exists
           if true, remove matched string and log to that logger
           if false, log to LuaSkinLog as currently done
-
-
-
-
-
---- hs.axuielement:matchesCriteria(criteria) -> boolean
---- Method
---- Returns true if the axuielementObject matches the specified criteria or false if it does not.
----
---- Parameters:
----  * `criteria`  - the criteria to compare against the accessibility object
----
---- Returns:
----  * true if the axuielementObject matches the criteria, false if it does not.
----
---- Notes:
----  * the `criteria` parameter must be one of the following:
----    * a single string, specifying the value the element's AXRole attribute must equal for a positive match
----
----    * an array table of strings specifying a list of possible values the element's AXRole attribute can equal for a positive match
----
----    * a table of key-value pairs specifying a more complex criteria. The table should be defined as follows:
----      * one or more of the following must be specified (though all specified must match):
----        * `attribute`              -- a string, or table of strings, specifying an attribute that the element must support. If it's a table, then only one of the attributes has to be valid for the element. Strings may be specified with their formal name (e.g. "AXSomething") or informal name (e.g. "something" or "Something").
----        * `action`                 -- a string, or table of strings, specifying an action that the element must be able to perform. If it's a table, then only one of the actions specified has to be valid for the element. Strings may be specified with their formal name (e.g. "AXSomething") or informal name (e.g. "something" or "Something").
----        * `parameterizedAttribute` -- a string, or table of strings, specifying a parametrized attribute that the element must support. If it's a table, then only one of the parameterizedAttributes specified has to be valid for the element. Strings may be specified with their formal name (e.g. "AXSomething") or informal name (e.g. "something" or "Something").
----      * if `attribute` is specified, you can use one of the the following to specify a specific value the attribute must equal for a positive match. No more than one of these should be provided. If neither are present, then only the existence of the `attribute` is required.
----        * `value`                  -- a value, or table of values, that `attribute` must equal. If it's a table, then only one of the values has to match the attribute value for a positive match.
----        * `nilValue`               -- a boolean, specifying that the attribute must not have an assigned value (true) or be assigned any value (false).
----      * the following are optional keys and are not required:
----        * `pattern`                -- a boolean, default false, specifying whether string matches should be evaluated with `string.match` (true) or as exact matches (false). See the Lua manual, section 6.4.1 (`help.lua._man._6_4_1` in the Hammerspoon console). This affects the assigned values for keys `attribute`, `action`, `parameterizedAttribute`, and `value`.
----        * `not`                    -- a boolean, default false, specifying inverted logic for the criteria result --- if this is true and the criteria matches, evaluate criteria as false; otherwise evaluate as true.
----
----    * an array table of one or more of the above criteria definitions; the element must be a positive match for all of the criteria specified in the table (logical AND).
----
----  * This method is used by [hs.axuielement.searchCriteriaFunction](#searchCriteriaFunction) to create criteria functions compatible with [hs.axuielement:elementSearch](#elementSearch).
-
-criteria = {
-    -- one or more of:
-        attribute              = string, -- string or table of strings specifying an attribute that the element must support
-                                            if table, then only one of the attributes has to be valid for the element
-        action                 = string, -- string or table of strings specifying an action that the element must be able to perform
-                                            if table, then only one of the actions specified has to be valid for the element
-        parameterizedAttribute = string, -- string or table of strings specifying a parametrized attribute that the element must support
-                                            if table, then only one of the parameterizedAttributes specified has to be valid for the element
-    -- if `attribute` is set, the following specify it's value (if neither present, then existence of attribute is sufficient)
-        value                  = value,  -- value or table of values that `attribute` must equal (ignored if `attribute` not specified)
-                                            if table, then only one of the values has to match the attribute value
-                                            if a value is a string, then it must be an exact match unless `pattern` is true
-        nilValue               = boolean, -- default false; ignored if `value` set or `attribute` not set
-
-    -- optional
-        pattern                = boolean, -- default false; if `value` refers to a string, treat it as a lua string pattern
-        not                    = boolean, -- default false; invert logic (i.e. return false if this criteria otherwise matches)
-                                             attribute should exist for element but have no value currently assigned
-}
-
-criteria = { criteria, ... } -- AND separate criteria together

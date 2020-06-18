@@ -5,35 +5,16 @@ This is being integrated into the core Hammerspoon application. This repository 
 
 Version 0.7.6 will be the last version that installs as `hs._asm.axuielement`. Starting with version `1.0`, this module now installs itself as `hs.axuielement`.
 
-Version 1.0.2+ has experimental `AXTextMarker` and `AXTextMarkerRange` support -- properties with these values can now be viewed but as the exact nature of the binary data is still unclear, editing them is untested. This is still being investigated.
-
-For now, a value of `AXTextMarker` will be returned as a table similar to:
-~~~lua
-  AXStartTextMarker = {
-    __AXTypeHelper = "AXTextMarker",
-    bytes = "¿∅∅∅∅∅∅∅¿\b¿=¿∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅¿∅∅∅∅∅∅∅",
-    length = 40
-  }
-~~~
-
-and a value of `AXTextMarkerRange` will be returned as a table similar to:
-~~~lua
-  AXSelectedTextMarkerRange = {
-    __AXTypeHelper = "AXTextMarkerRange",
-    endMarker = {
-      __AXTypeHelper = "AXTextMarker",
-      bytes = "¿¿∅∅∅∅∅∅PA¿=¿∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅¿∅∅∅∅∅∅∅",
-      length = 40
-    },
-    startMarker = {
-      __AXTypeHelper = "AXTextMarker",
-      bytes = "¿¿∅∅∅∅∅∅PA¿=¿∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅∅¿∅∅∅∅∅∅∅",
-      length = 40
-    }
-  }
-~~~
-
-If you do attempt to edit them in your own experimentation, makre sure to keep the `__AXTypeHelper` key as that is how the parser knows to convert them into the appropriate object when setting the property.
+Minus bug fixes, version 1.0.5 is expected to be the version migrated into core soon. It includes the following updates over previous versions:
+* AXTextMarker and AXTextMarkerRange support through `hs.axuielement.axtextmarker`
+  * note that these are opaque and application specific but are useful with parameterizedAttributes for the same application
+* The merging of elementSearch, allAttributeValues, and buildTree to use a common code base
+  * which used a breadth first search
+  * can be interuppted and resumed
+  * can return results in stages
+* Criteria for elementSearch is now a function to allow arbitrary complexity in determining whether or not to include an element
+* matchesCriteria is rewritten to allow matching on actions and parameterizedAttribute existence as well as attribute existence, as well as proper `any value` and `no value` detection
+  * `hs.axuielement.searchCriteriaFunction` is a wrapper that can be used with elementSearch that uses matchesCriteria
 
 - - -
 
