@@ -676,7 +676,7 @@ local elementSearchHamsterBF = function(elementSearchObject)
 
         local element = table.remove(queue, 1)
         if getmetatable(element) == objectMT then
-            local aav = element:allAttributeValues(true)
+            local aav = element:allAttributeValues(true) or {}
             state.visited = state.visited + 1
             if criteriaEmpty or criteria(element) then
                 state.matched = state.matched + 1
