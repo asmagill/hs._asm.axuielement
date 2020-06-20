@@ -321,6 +321,13 @@ static int axuielement_getAttributeValue(lua_State *L) {
 ///
 /// Returns:
 ///  * a table with key-value pairs corresponding to the attributes of the accessibility object or nil and an error string if an accessibility error occurred
+///
+/// Notes:
+///  * if `includeErrors` is not specified or is false, then attributes which exist for the element, but currently have no value assigned, will not appear in the table. This is because Lua treats a nil value for a table's key-value pair as an instruction to remove the key from the table, if it currently exists.
+///  * To include attributes which exist but are currently unset, you need to specify `includeErrors` as true.
+///    * attributes for which no value is currently assigned will be given a table value with the following key-value pairs:
+///      * `_code` = -25212
+///      * `error` = "Requested value does not exist."
 static int axuielement_getAllAttributeValues(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBOOLEAN | LS_TOPTIONAL, LS_TBREAK] ;
