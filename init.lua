@@ -4,22 +4,27 @@
 ---
 --- This module works through the use of axuielementObjects, which is the Hammerspoon representation for an accessibility object.  An accessibility object represents any object or component of an OS X application which can be manipulated through the OS X Accessibility API -- it can be an application, a window, a button, selected text, etc.  As such, it can only support those features and objects within an application that the application developers make available through the Accessibility API.
 ---
---- The basic methods available to determine what attributes and actions are available for a given object are described in this reference documentation.  In addition, the module will dynamically add methods for the attributes and actions appropriate to the object, but these will differ between object roles and applications -- again we are limited by what the target application developers provide us.
+--- In addition to the formal methods described in this documentation, dynamic methods exist for accessing element attributes and actions. These will differ somewhat between objects as the specific attributes and actions will depend upon the accessibility object's role and purpose, but the following outlines the basics.
 ---
---- The dynamically generated methods will follow one of the following templates:
----  * `object:<attribute>()`            - this will return the value for the specified attribute (see [hs.axuielement:attributeValue](#attributeValue) for the generic function this is based on). If the element does not have this specific attribute, an error will be generated.
----  * `object("<attribute>")`           - this will return the value for the specified attribute. Returns nil if the element does not have this specific attribute instead of generating an error.
----  * `object:set<attribute>(value)`    - this will set the specified attribute to the given value (see [hs.axuielement:setAttributeValue](#setAttributeValue) for the generic function this is based on). If the element does not have this specific attribute or if it is not settable, an error will be generated.
----  * `object("set<attribute>", value)` - this will set the specified attribute to the given value. If the element does not have this specific attribute or if it is not settable, an error will be generated.
----  * `object:do<action>()`             - this request that the specified action is performed by the object (see [hs.axuielement:performAction](#performAction) for the generic function this is based on). If the element does not respond to this action, an error will be generated.
----  * `object("do<action>")`            - this request that the specified action is performed by the object. If the element does not respond to this action, an error will be generated.
+--- Getters and Setters:
+---  * `object.attribute` is a shortcut for `object:attributeValue(attribute)` and returns the value of the specified attribute or nil if the attribute has no value or does not exist for the element.
+---  * `object.attribute = value` is a shortcut for `object:setAttributeValue(attribute, value)`. Note that both of these methods will attempt to set any valid attribute for the element, even if the atteribute is not settable as per [hs.axuielement:isAttributeSettable](#isAttributeSettable), but will silently fail when the attribute is read-only.
+---  * in both of the above cases, the shortcut version allows you to ommit the "AX" prefix for attribute names (e.g. attribute can be "title", "Title", or "AXTitle" are equally valid) while the formal methods require the actual attribute name as returned by [hs.axuielement:attributeNames](#attributeNames) (e.g. "AXTitle").
 ---
---- Where `<action>` and `<attribute>` can be the formal Accessibility version of the attribute or action name (a string usually prefixed with "AX") or without the "AX" prefix.  When the prefix is left off, the first letter of the action or attribute can be uppercase or lowercase.
+--- Iteration:
+---  * `for k,v in pairs(object) do ... end` is a shortcut for `for k,v in pairs(object:allAttributeValues()) do ... end` and will iterate through the attributes.
+---    * Note that the shortcut version will include existing element attributes that are currently unassigned (with a value of `nil`) while the formal version does not by default because the value of `nil` precvents the key from being retained in the table. See [hs.axuielement:allAttributeValues](#allAttributeValues) for details and a workaround.
+---  * `for i,v in ipairs(object) do ... end` is a shortcut for `for i,v in pairs(object:attributeValue("AXChildren")) do ... end`
+---    * In addition, `#object` will return the number of items in the `object:attributeValue("AXChildren")` array table, and `object[i]`, when `i` is a number, will return the i'th member of the child array (i.e. `object:attributeValue("AXChildren")[i]`
 ---
---- The module also dynamically supports treating the axuielementObject useradata as an array, to access it's children (i.e. `#object` will return a number, indicating the number of direct children the object has, and `object[1]` is equivalent to `object:children()[1]` or, more formally, `object:attributeValue("AXChildren")[1]`).
+--- Actions:
+---  * `object:do<action>` and `object("do<action>")` are shortcuts for `object:performAction(action)`.
+---  * Note that `<action>` in the shortcuts can ommit the "AX" prefix for an action name (e.g. "dopress", "doPress", or "doAXPress" are equally valid) while the formal method requires the actual action name as returned by  [hs.axuielement:actionNames](#actionNames) (e.g. "AXPress").
 ---
---- You can also treat the axuielementObject userdata as a table of key-value pairs to generate a list of the dynamically generated functions: `for k, v in pairs(object) do print(k, v) end` (this is essentially what [hs.axuielement:dynamicMethods](#dynamicMethods) does).
-
+--- ParameterizedAttributes:
+---  * `object:<attribute>WithParameter(value)` and `object("<attribute>WithParameter", value)` are shortcuts for `object:parameterizedAttributeValue(attribute, value)
+---  * Note that `<attribute>` in the shortcuts can ommit the "AX" prefix for a parameterized attribute name (e.g. "rangeForLineWithParameter", "RangeForLineWithParameter", or "AXRangeForLineWithParameter" are equally valid) while the formal method requires the actual parameterized attribute name as returned by  [hs.axuielement:parameterizedAttributeNames](#parameterizedAttributeNames) (e.g. "AXRangeForLine").
+---  * The specific value required for a each parameterized attribute is different and may even be application specific thus requiring some experimentation. Notes regarding identified parameter types and thoughts on some still being investigated will be provided in the Hammerspoon Wiki, hopefully shortly after this module becomes part of a Hammerspoon release.
 local USERDATA_TAG = "hs.axuielement"
 
 if not hs.accessibilityState(true) then
@@ -91,164 +96,107 @@ end
 
 -- build up the "correct" object metatable methods
 
-objectMT.__index = function(self, _)
-    if type(_) == "string" then
+objectMT.__index = function(self, key)
+    if type(key) == "string" then
         -- take care of the internally defined items first so we can get out of here quickly if its one of them
-        if objectMT[_] then return objectMT[_] end
+        if objectMT[key] then return objectMT[key] end
 
-        -- Now for the dynamically generated methods...
+        -- Now for the dynamically generated stuff...
 
-        local matchName = _:match("^set(%u[%w_]*)$")
-        if not matchName then matchName = _:match("^do(%u[%w_]*)$") end
-        if not matchName then matchName = _:match("^([%w_]+)Parameter$") end
-        if not matchName then matchName = _ end
-        local formalName = matchName:match("^AX[%w_]+$") and matchName or "AX"..matchName:sub(1,1):upper()..matchName:sub(2)
+        local getter, doer, parameterized = false, false, false
 
-        -- luacheck: push ignore __
-
-        -- check for setters
-        if _:match("^set%u") then
-
-             -- check attributes
-             for __, v in ipairs(objectMT.attributeNames(self) or {}) do
-                if v == formalName and objectMT.isAttributeSettable(self, formalName) then
-                    return function(self2, ...) return objectMT.setAttributeValue(self2, formalName, ...) end
-                end
-            end
-
-        -- check for doers
-        elseif _:match("^do%u") then
-
-            -- check actions
-            for __, v in ipairs(objectMT.actionNames(self) or {}) do
-                if v == formalName then
-                    return function(self2, ...) return objectMT.performAction(self2, formalName, ...) end
-                end
-            end
-
-        -- getter or bust
+        local matchName = key:match("^do(%u[%w_]*)$")
+        if matchName then
+            doer = true
         else
-
-            -- check attributes
-            for __, v in ipairs(objectMT.attributeNames(self) or {}) do
-                if v == formalName then
-                    return function(self2, ...) return objectMT.attributeValue(self2, formalName, ...) end
-                end
-            end
-
-            -- check paramaterizedAttributes
-            for __, v in ipairs(objectMT.parameterizedAttributeNames(self) or {}) do
-                if v == formalName then
-                    return function(self2, ...) return objectMT.parameterizedAttributeValue(self2, formalName, ...) end
-                end
+            matchName = key:match("^([%w_]+)WithParameter$")
+            if matchName then
+                parameterized = true
+            else
+                matchName = key
+                getter = true
             end
         end
 
-        -- luacheck: pop
+        local formalName = matchName:match("^AX[%w_]+$") and matchName or "AX"..matchName:sub(1,1):upper()..matchName:sub(2)
+
+        if doer then
+            for _, v in ipairs(objectMT.actionNames(self) or {}) do
+                -- haven't seen actions that don't start with AX, but it's legal as far as I can tell
+                if v == formalName or v == matchName then
+                    return function(self2, ...) return objectMT.performAction(self2, v, ...) end
+                end
+            end
+        elseif parameterized then
+            for _, v in ipairs(objectMT.parameterizedAttributeNames(self) or {}) do
+                -- haven't seen parameterized attributes that don't start with AX, but it's legal as far as I can tell
+                if v == formalName or v == matchName then
+                    return function(self2, ...) return objectMT.parameterizedAttributeValue(self2, v, ...) end
+                end
+            end
+        else
+            for _, v in ipairs(objectMT.attributeNames(self) or {}) do
+                -- haven't seen attributes that don't start with AX, but it's legal as far as I can tell
+                if v == formalName or v == matchName then
+                    return objectMT.attributeValue(self, v)
+                end
+            end
+        end
 
         -- guess it doesn't exist
         return nil
-    elseif type(_) == "number" then
-        local children = objectMT.attributeValue(self, "AXChildren")
-        if children then
-            return children[_]
-        else
-            return nil
-        end
+    elseif type(key) == "number" then
+        local children = objectMT.attributeValue(self, "AXChildren") or {}
+        return children[key]
     else
         return nil
     end
 end
 
-objectMT.__call = function(_, cmd, ...)
-    local fn = objectMT.__index(_, cmd)
+objectMT.__newindex = function(self, key, value)
+    local formalName = key:match("^AX[%w_]+$") and key or "AX"..key:sub(1,1):upper()..key:sub(2)
+    for _, v in ipairs(objectMT.attributeNames(self) or {}) do
+        -- haven't seen attributes that don't start with AX, but it's legal as far as I can tell
+        if v == formalName or v == key then
+            local ok, err = self:setAttributeValue(v, value)
+            if not ok then error(err, 2) end
+            return
+        end
+    end
+    error("attempt to index a " .. USERDATA_TAG .. " value", 2)
+end
+
+objectMT.__call = function(self, cmd, ...)
+    local fn = objectMT.__index(self, cmd)
     if fn and type(fn) == "function" then
-        return fn(_, ...)
+        return fn(self, ...)
     elseif fn then
         return fn
     elseif cmd:match("^do%u") then
         error(tostring(cmd) .. " is not a recognized action", 2)
-    elseif cmd:match("^set%u") then
-        error(tostring(cmd) .. " is not a recognized attribute", 2)
     else
         return nil
     end
 end
 
-objectMT.__pairs = function(_)
+objectMT.__pairs = function(self)
     local keys = {}
+    -- rather than capture all attribute values at outset, we just capture key names so
+    -- the generator function can get the latest values in case something changes during
+    -- iteration
+    for _,v in ipairs(objectMT.attributeNames(self)) do keys[v] = true end
 
-    -- luacheck: push ignore __
-
-    -- getters and setters for attributeNames
-    for __, v in ipairs(objectMT.attributeNames(_) or {}) do
-        local partialName = v:match("^AX(.*)")
-        if partialName then
-            keys[partialName:sub(1,1):lower() .. partialName:sub(2)] = true
-            if objectMT.isAttributeSettable(_, v) then
-                keys["set" .. partialName] = true
-            end
-        end
-    end
-
-    -- getters for paramaterizedAttributes
-    for __, v in ipairs(objectMT.parameterizedAttributeNames(_) or {}) do
-        local partialName = v:match("^AX(.*)")
-        if partialName then
-            keys[partialName:sub(1,1):lower() .. partialName:sub(2) .. "Parameter"] = true
-        end
-    end
-
-    -- doers for actionNames
-    for __, v in ipairs(objectMT.actionNames(_) or {}) do
-        local partialName = v:match("^AX(.*)")
-        if partialName then
-            keys["do" .. partialName] = true
-        end
-    end
-
-    -- luacheck: pop
-
-    return function(_, k)
+     return function(_, k)
             local v
             k, v = next(keys, k)
             if k then v = _[k] end
             return k, v
-        end, _, nil
+        end, self, nil
 end
 
 objectMT.__len = function(self)
-    local children = objectMT.attributeValue(self, "AXChildren")
-    if children then
-        return #children
-    else
-        return 0
-    end
-end
-
---- hs.axuielement:dynamicMethods([keyValueTable]) -> table
---- Method
---- Returns a list of the dynamic methods (short cuts) created by this module for the object
----
---- Parameters:
----  * `keyValueTable` - an optional boolean, default false, indicating whether or not the result should be an array (false) or a table of key-value pairs (true).
----
---- Returns:
----  * If `keyValueTable` is true, this method returns a table of key-value pairs with each key being the name of a dynamically generated method, and the value being the corresponding function.  Otherwise, this method returns an array of the dynamically generated method names.
----
---- Notes:
----  * the dynamically generated methods are described more fully in the reference documentation header, but basically provide shortcuts for getting and setting attribute values as well as perform actions supported by the Accessibility object the axuielementObject represents.
-objectMT.dynamicMethods = function(self, asKV)
-    local results = {}
-    for k, v in pairs(self) do
-        if asKV then
-            results[k] = v
-        else
-            table.insert(results, k)
-        end
-    end
-    if not asKV then table.sort(results) end
-    return ls.makeConstantsTable(results)
+    local children = objectMT.attributeValue(self, "AXChildren") or {}
+    return #children
 end
 
 --- hs.axuielement:path() -> table
@@ -297,7 +245,7 @@ end
 ---  * true if the axuielementObject matches the criteria, false if it does not.
 ---
 --- Notes:
----  * the `criteria` parameter must be one of the following:
+---  * the `criteria` argument must be one of the following:
 ---    * a single string, specifying the value the element's AXRole attribute must equal for a positive match
 ---
 ---    * an array table of strings specifying a list of possible values the element's AXRole attribute can equal for a positive match
@@ -778,7 +726,7 @@ end
 ---
 --- Returns:
 ---  * an elementSearchObject which contains metamethods allowing you to check to see if the process has completed and cancel it early if desired. The methods include:
----    * `elementSearchObject:cancel([reason])` - cancels the current search and invokes the callback with the partial results already collected. If you specify `reason`, the `msg` parameter for the callback will be `** <reason>`; otherwise it will be "** cancelled".
+---    * `elementSearchObject:cancel([reason])` - cancels the current search and invokes the callback with the partial results already collected. If you specify `reason`, the `msg` argument for the callback will be `** <reason>`; otherwise it will be "** cancelled".
 ---    * `elementSearchObject:isRunning()`      - returns true if the search is currently ongoing or false if it has completed or been cancelled.
 ---    * `elementSearchObject:matched()`        - returns an integer specifying the number of elements which have already been found that meet the specified criteria function.
 ---    * `elementSearchObject:runTime()`        - returns an integer specifying the number of seconds spent performing this search. Note that this is *not* an accurate measure of how much time a given search will always take because the time will be greatly affected by how much other activity is occurring within Hammerspoon and on the users computer. Resuming a cancelled search or a search which invoked the callback because it reached `count` items with the `next` method (descibed below) will cause this number to begin increasing again to provide a cumulative total of time spent performing the search; time between when the callback is invoked and the `next` method is invoked is not included.
