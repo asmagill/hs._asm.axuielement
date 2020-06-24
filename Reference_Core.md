@@ -5,21 +5,38 @@ This module allows you to access the accessibility objects of running applicatio
 
 This module works through the use of axuielementObjects, which is the Hammerspoon representation for an accessibility object.  An accessibility object represents any object or component of an OS X application which can be manipulated through the OS X Accessibility API -- it can be an application, a window, a button, selected text, etc.  As such, it can only support those features and objects within an application that the application developers make available through the Accessibility API.
 
-The basic methods available to determine what attributes and actions are available for a given object are described in this reference documentation.  In addition, the module will dynamically add methods for the attributes and actions appropriate to the object, but these will differ between object roles and applications -- again we are limited by what the target application developers provide us.
+In addition to the formal methods described in this documentation, dynamic methods exist for accessing element attributes and actions. These will differ somewhat between objects as the specific attributes and actions will depend upon the accessibility object's role and purpose, but the following outlines the basics.
 
-The dynamically generated methods will follow one of the following templates:
- * `object:<attribute>()`            - this will return the value for the specified attribute (see [hs.axuielement:attributeValue](#attributeValue) for the generic function this is based on). If the element does not have this specific attribute, an error will be generated.
- * `object("<attribute>")`           - this will return the value for the specified attribute. Returns nil if the element does not have this specific attribute instead of generating an error.
- * `object:set<attribute>(value)`    - this will set the specified attribute to the given value (see [hs.axuielement:setAttributeValue](#setAttributeValue) for the generic function this is based on). If the element does not have this specific attribute or if it is not settable, an error will be generated.
- * `object("set<attribute>", value)` - this will set the specified attribute to the given value. If the element does not have this specific attribute or if it is not settable, an error will be generated.
- * `object:do<action>()`             - this request that the specified action is performed by the object (see [hs.axuielement:performAction](#performAction) for the generic function this is based on). If the element does not respond to this action, an error will be generated.
- * `object("do<action>")`            - this request that the specified action is performed by the object. If the element does not respond to this action, an error will be generated.
+Getting and Setting Attribute values:
+ * `object.attribute` is a shortcut for `object:attributeValue(attribute)`
+ * `object.attribute = value` is a shortcut for `object:setAttributeValue(attribute, value)`
+   * If detecting accessiblity errors that may occur is necessary, you must use the formal methods [hs.axuielement:attributeValue](#attributeValue) and [hs.axuielement:setAttributeValue](#setAttributeValue)
+   * Note that setting an attribute value is not guaranteeed to work with either method:
+     * internal logic within the receiving application may decline to accept the newly assigned value
+     * an accessibility error may occur
+     * the element may not be settable (surprisingly this does not return an error, even when [hs.axuielement:isAttributeSettable](#isAttributeSettable) returns false for the attribute specified)
+   * If you require confirmation of the change, you will need to check the value of the attribute with one of the methods described above after setting it.
 
-Where `<action>` and `<attribute>` can be the formal Accessibility version of the attribute or action name (a string usually prefixed with "AX") or without the "AX" prefix.  When the prefix is left off, the first letter of the action or attribute can be uppercase or lowercase.
+Iteration over Attributes:
+ * `for k,v in pairs(object) do ... end` is a shortcut for `for k,_ in ipairs(object:attributeNames()) do local v = object:attributeValue(k) ; ... end` or `for k,v in pairs(object:allAttributeValues()) do ... end` (though see note below)
+    * If detecting accessiblity errors that may occur is necessary, you must use one of the formal approaches [hs.axuielement:allAttributeValues](#allAttributeValues) or [hs.axuielement:attributeNames](#attributeNames) and [hs.axuielement:attributeValue](#attributeValue)
+   * By default, [hs.axuielement:allAttributeValues](#allAttributeValues) will not include key-value pairs for which the attribute (key) exists for the element but has no assigned value (nil) at the present time. This is because the value of `nil` prevents the key from being retained in the table returned. See [hs.axuielement:allAttributeValues](#allAttributeValues) for details and a workaround.
 
-The module also dynamically supports treating the axuielementObject useradata as an array, to access it's children (i.e. `#object` will return a number, indicating the number of direct children the object has, and `object[1]` is equivalent to `object:children()[1]` or, more formally, `object:attributeValue("AXChildren")[1]`).
+Iteration over Child Elements (AXChildren):
+ * `for i,v in ipairs(object) do ... end` is a shortcut for `for i,v in pairs(object:attributeValue("AXChildren")) do ... end`
+ * `#object` is a shortcut for `#object:attributeValue("AXChildren")`
+ * `object[i]` is a shortcut for `object:attributeValue("AXChildren")[i]`
+   * If detecting accessiblity errors that may occur is necessary, you must use the formal method [hs.axuielement:attributeValue](#attributeValue) to get the "AXChildren" attribute.
 
-You can also treat the axuielementObject userdata as a table of key-value pairs to generate a list of the dynamically generated functions: `for k, v in pairs(object) do print(k, v) end` (this is essentially what [hs.axuielement:dynamicMethods](#dynamicMethods) does).
+Actions ([hs.axuielement:actionNames](#actionNames)):
+ * `object:do<action>()` is a shortcut for `object:performAction(action)`
+   * See [hs.axuielement:performAction](#performAction) for a description of the return values and [hs.axuielement:actionNames](#actionNames) to get a list of actions that the element supports.
+
+ParameterizedAttributes:
+ * `object:<attribute>WithParameter(value)` is a shortcut for `object:parameterizedAttributeValue(attribute, value)
+   * See [hs.axuielement:parameterizedAttributeValue](#parameterizedAttributeValue) for a description of the return values and [hs.axuielement:parameterizedAttributeNames](#parameterizedAttributeNames) to get a list of parameterized values that the element supports
+
+   * The specific value required for a each parameterized attribute is different and is often application specific thus requiring some experimentation. Notes regarding identified parameter types and thoughts on some still being investigated will be provided in the Hammerspoon Wiki, hopefully shortly after this module becomes part of a Hammerspoon release.
 
 
 ### Usage
@@ -52,7 +69,6 @@ axuielement = require("hs.axuielement")
 * <a href="#attributeValueCount">axuielement:attributeValueCount(attribute) -> integer | nil, errString</a>
 * <a href="#buildTree">axuielement:buildTree(callback, [depth], [withParents]) -> elementSearchObject</a>
 * <a href="#copy">axuielement:copy() -> axuielementObject</a>
-* <a href="#dynamicMethods">axuielement:dynamicMethods([keyValueTable]) -> table</a>
 * <a href="#elementAtPosition">axuielement:elementAtPosition(x, y | pointTable) -> axuielementObject | nil, errString</a>
 * <a href="#elementSearch">axuielement:elementSearch(callback, [criteria], [namedModifiers]) -> elementSearchObject</a>
 * <a href="#isAttributeSettable">axuielement:isAttributeSettable(attribute) -> boolean | nil, errString</a>
@@ -223,6 +239,13 @@ Parameters:
 Returns:
  * a table with key-value pairs corresponding to the attributes of the accessibility object or nil and an error string if an accessibility error occurred
 
+Notes:
+ * if `includeErrors` is not specified or is false, then attributes which exist for the element, but currently have no value assigned, will not appear in the table. This is because Lua treats a nil value for a table's key-value pair as an instruction to remove the key from the table, if it currently exists.
+ * To include attributes which exist but are currently unset, you need to specify `includeErrors` as true.
+   * attributes for which no value is currently assigned will be given a table value with the following key-value pairs:
+     * `_code` = -25212
+     * `error` = "Requested value does not exist."
+
 - - -
 
 <a name="allChildElements"></a>
@@ -357,23 +380,6 @@ Returns:
 
 - - -
 
-<a name="dynamicMethods"></a>
-~~~lua
-axuielement:dynamicMethods([keyValueTable]) -> table
-~~~
-Returns a list of the dynamic methods (short cuts) created by this module for the object
-
-Parameters:
- * `keyValueTable` - an optional boolean, default false, indicating whether or not the result should be an array (false) or a table of key-value pairs (true).
-
-Returns:
- * If `keyValueTable` is true, this method returns a table of key-value pairs with each key being the name of a dynamically generated method, and the value being the corresponding function.  Otherwise, this method returns an array of the dynamically generated method names.
-
-Notes:
- * the dynamically generated methods are described more fully in the reference documentation header, but basically provide shortcuts for getting and setting attribute values as well as perform actions supported by the Accessibility object the axuielementObject represents.
-
-- - -
-
 <a name="elementAtPosition"></a>
 ~~~lua
 axuielement:elementAtPosition(x, y | pointTable) -> axuielementObject | nil, errString
@@ -417,7 +423,7 @@ Parameters:
 
 Returns:
  * an elementSearchObject which contains metamethods allowing you to check to see if the process has completed and cancel it early if desired. The methods include:
-   * `elementSearchObject:cancel([reason])` - cancels the current search and invokes the callback with the partial results already collected. If you specify `reason`, the `msg` parameter for the callback will be `** <reason>`; otherwise it will be "** cancelled".
+   * `elementSearchObject:cancel([reason])` - cancels the current search and invokes the callback with the partial results already collected. If you specify `reason`, the `msg` argument for the callback will be `** <reason>`; otherwise it will be "** cancelled".
    * `elementSearchObject:isRunning()`      - returns true if the search is currently ongoing or false if it has completed or been cancelled.
    * `elementSearchObject:matched()`        - returns an integer specifying the number of elements which have already been found that meet the specified criteria function.
    * `elementSearchObject:runTime()`        - returns an integer specifying the number of seconds spent performing this search. Note that this is *not* an accurate measure of how much time a given search will always take because the time will be greatly affected by how much other activity is occurring within Hammerspoon and on the users computer. Resuming a cancelled search or a search which invoked the callback because it reached `count` items with the `next` method (descibed below) will cause this number to begin increasing again to provide a cumulative total of time spent performing the search; time between when the callback is invoked and the `next` method is invoked is not included.
@@ -489,16 +495,16 @@ Returns:
  * true if the axuielementObject matches the criteria, false if it does not.
 
 Notes:
- * the `criteria` parameter must be one of the following:
+ * the `criteria` argument must be one of the following:
    * a single string, specifying the value the element's AXRole attribute must equal for a positive match
 
    * an array table of strings specifying a list of possible values the element's AXRole attribute can equal for a positive match
 
    * a table of key-value pairs specifying a more complex criteria. The table should be defined as follows:
      * one or more of the following must be specified (though all specified must match):
-       * `attribute`              -- a string, or table of strings, specifying attributes that the element must support. Strings may be specified with their formal name (e.g. "AXSomething") or informal name (e.g. "something" or "Something").
-       * `action`                 -- a string, or table of strings, specifying actions that the element must be able to perform. Strings may be specified with their formal name (e.g. "AXSomething") or informal name (e.g. "something" or "Something").
-       * `parameterizedAttribute` -- a string, or table of strings, specifying parametrized attributes that the element must support. Strings may be specified with their formal name (e.g. "AXSomething") or informal name (e.g. "something" or "Something").
+       * `attribute`              -- a string, or table of strings, specifying attributes that the element must support.
+       * `action`                 -- a string, or table of strings, specifying actions that the element must be able to perform.
+       * `parameterizedAttribute` -- a string, or table of strings, specifying parametrized attributes that the element must support.
 
      * if the `attribute` key is specified, you can use one of the the following to specify a specific value the attribute must equal for a positive match. No more than one of these should be provided. If neither are present, then only the existence of the attributes specified by `attribute` are required.
        * `value`                  -- a value, or table of values, that a specifeid attribute must equal. If it's a table, then only one of the values has to match the attribute value for a positive match. Note that if you specify more than one attribute with the `attribute` key, you must provide at least one value for each attribute in this table (order does not matter, but the match will fail if any atrribute does not match at least one value provided).
@@ -542,7 +548,7 @@ Returns:
  * the current value of the parameterized attribute, nil if the parameterized attribute has no value, or nil and an error string if an accessibility error occurred
 
 Notes:
- * The specific parameter required for a each parameterized attribute is different and may even be application specific thus requiring some experimentation. Notes regarding identified parameter types and thoughts on some still being investigated will be provided in the Hammerspoon Wiki, hopefully shortly after this module becomes part of a Hammerspoon release.
+ * The specific parameter required for a each parameterized attribute is different and is often application specific thus requiring some experimentation. Notes regarding identified parameter types and thoughts on some still being investigated will be provided in the Hammerspoon Wiki, hopefully shortly after this module becomes part of a Hammerspoon release.
 
 - - -
 
@@ -608,9 +614,6 @@ Parameters:
 
 Returns:
  * the axuielementObject on success; nil and an error string if the attribute could not be set or an accessibility error occurred.
-
-Notes:
- * This is still somewhat experimental and needs more testing; use with caution.
 
 - - -
 

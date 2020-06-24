@@ -591,7 +591,7 @@ static int axuielement_getElementAtPosition(lua_State *L) {
 ///  * the current value of the parameterized attribute, nil if the parameterized attribute has no value, or nil and an error string if an accessibility error occurred
 ///
 /// Notes:
-///  * The specific parameter required for a each parameterized attribute is different and may even be application specific thus requiring some experimentation. Notes regarding identified parameter types and thoughts on some still being investigated will be provided in the Hammerspoon Wiki, hopefully shortly after this module becomes part of a Hammerspoon release.
+///  * The specific parameter required for a each parameterized attribute is different and is often application specific thus requiring some experimentation. Notes regarding identified parameter types and thoughts on some still being investigated will be provided in the Hammerspoon Wiki, hopefully shortly after this module becomes part of a Hammerspoon release.
 static int axuielement_getParameterizedAttributeValue(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TSTRING, LS_TANY, LS_TBREAK] ;
@@ -624,9 +624,6 @@ static int axuielement_getParameterizedAttributeValue(lua_State *L) {
 ///
 /// Returns:
 ///  * the axuielementObject on success; nil and an error string if the attribute could not be set or an accessibility error occurred.
-///
-/// Notes:
-///  * This is still somewhat experimental and needs more testing; use with caution.
 static int axuielement_setAttributeValue(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TSTRING, LS_TANY, LS_TBREAK] ;

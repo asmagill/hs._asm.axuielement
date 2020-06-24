@@ -6,25 +6,36 @@
 ---
 --- In addition to the formal methods described in this documentation, dynamic methods exist for accessing element attributes and actions. These will differ somewhat between objects as the specific attributes and actions will depend upon the accessibility object's role and purpose, but the following outlines the basics.
 ---
---- Getters and Setters:
----  * `object.attribute` is a shortcut for `object:attributeValue(attribute)` and returns the value of the specified attribute or nil if the attribute has no value or does not exist for the element.
----  * `object.attribute = value` is a shortcut for `object:setAttributeValue(attribute, value)`. Note that both of these methods will attempt to set any valid attribute for the element, even if the atteribute is not settable as per [hs.axuielement:isAttributeSettable](#isAttributeSettable), but will silently fail when the attribute is read-only.
----  * in both of the above cases, the shortcut version allows you to ommit the "AX" prefix for attribute names (e.g. attribute can be "title", "Title", or "AXTitle" are equally valid) while the formal methods require the actual attribute name as returned by [hs.axuielement:attributeNames](#attributeNames) (e.g. "AXTitle").
+--- Getting and Setting Attribute values:
+---  * `object.attribute` is a shortcut for `object:attributeValue(attribute)`
+---  * `object.attribute = value` is a shortcut for `object:setAttributeValue(attribute, value)`
+---    * If detecting accessiblity errors that may occur is necessary, you must use the formal methods [hs.axuielement:attributeValue](#attributeValue) and [hs.axuielement:setAttributeValue](#setAttributeValue)
+---    * Note that setting an attribute value is not guaranteeed to work with either method:
+---      * internal logic within the receiving application may decline to accept the newly assigned value
+---      * an accessibility error may occur
+---      * the element may not be settable (surprisingly this does not return an error, even when [hs.axuielement:isAttributeSettable](#isAttributeSettable) returns false for the attribute specified)
+---    * If you require confirmation of the change, you will need to check the value of the attribute with one of the methods described above after setting it.
 ---
---- Iteration:
----  * `for k,v in pairs(object) do ... end` is a shortcut for `for k,v in pairs(object:allAttributeValues()) do ... end` and will iterate through the attributes.
----    * Note that the shortcut version will include existing element attributes that are currently unassigned (with a value of `nil`) while the formal version does not by default because the value of `nil` precvents the key from being retained in the table. See [hs.axuielement:allAttributeValues](#allAttributeValues) for details and a workaround.
+--- Iteration over Attributes:
+---  * `for k,v in pairs(object) do ... end` is a shortcut for `for k,_ in ipairs(object:attributeNames()) do local v = object:attributeValue(k) ; ... end` or `for k,v in pairs(object:allAttributeValues()) do ... end` (though see note below)
+---     * If detecting accessiblity errors that may occur is necessary, you must use one of the formal approaches [hs.axuielement:allAttributeValues](#allAttributeValues) or [hs.axuielement:attributeNames](#attributeNames) and [hs.axuielement:attributeValue](#attributeValue)
+---    * By default, [hs.axuielement:allAttributeValues](#allAttributeValues) will not include key-value pairs for which the attribute (key) exists for the element but has no assigned value (nil) at the present time. This is because the value of `nil` prevents the key from being retained in the table returned. See [hs.axuielement:allAttributeValues](#allAttributeValues) for details and a workaround.
+---
+--- Iteration over Child Elements (AXChildren):
 ---  * `for i,v in ipairs(object) do ... end` is a shortcut for `for i,v in pairs(object:attributeValue("AXChildren")) do ... end`
----    * In addition, `#object` will return the number of items in the `object:attributeValue("AXChildren")` array table, and `object[i]`, when `i` is a number, will return the i'th member of the child array (i.e. `object:attributeValue("AXChildren")[i]`
+---  * `#object` is a shortcut for `#object:attributeValue("AXChildren")`
+---  * `object[i]` is a shortcut for `object:attributeValue("AXChildren")[i]`
+---    * If detecting accessiblity errors that may occur is necessary, you must use the formal method [hs.axuielement:attributeValue](#attributeValue) to get the "AXChildren" attribute.
 ---
---- Actions:
----  * `object:do<action>` and `object("do<action>")` are shortcuts for `object:performAction(action)`.
----  * Note that `<action>` in the shortcuts can ommit the "AX" prefix for an action name (e.g. "dopress", "doPress", or "doAXPress" are equally valid) while the formal method requires the actual action name as returned by  [hs.axuielement:actionNames](#actionNames) (e.g. "AXPress").
+--- Actions ([hs.axuielement:actionNames](#actionNames)):
+---  * `object:do<action>()` is a shortcut for `object:performAction(action)`
+---    * See [hs.axuielement:performAction](#performAction) for a description of the return values and [hs.axuielement:actionNames](#actionNames) to get a list of actions that the element supports.
 ---
 --- ParameterizedAttributes:
----  * `object:<attribute>WithParameter(value)` and `object("<attribute>WithParameter", value)` are shortcuts for `object:parameterizedAttributeValue(attribute, value)
----  * Note that `<attribute>` in the shortcuts can ommit the "AX" prefix for a parameterized attribute name (e.g. "rangeForLineWithParameter", "RangeForLineWithParameter", or "AXRangeForLineWithParameter" are equally valid) while the formal method requires the actual parameterized attribute name as returned by  [hs.axuielement:parameterizedAttributeNames](#parameterizedAttributeNames) (e.g. "AXRangeForLine").
----  * The specific value required for a each parameterized attribute is different and may even be application specific thus requiring some experimentation. Notes regarding identified parameter types and thoughts on some still being investigated will be provided in the Hammerspoon Wiki, hopefully shortly after this module becomes part of a Hammerspoon release.
+---  * `object:<attribute>WithParameter(value)` is a shortcut for `object:parameterizedAttributeValue(attribute, value)
+---    * See [hs.axuielement:parameterizedAttributeValue](#parameterizedAttributeValue) for a description of the return values and [hs.axuielement:parameterizedAttributeNames](#parameterizedAttributeNames) to get a list of parameterized values that the element supports
+---
+---    * The specific value required for a each parameterized attribute is different and is often application specific thus requiring some experimentation. Notes regarding identified parameter types and thoughts on some still being investigated will be provided in the Hammerspoon Wiki, hopefully shortly after this module becomes part of a Hammerspoon release.
 local USERDATA_TAG = "hs.axuielement"
 
 if not hs.accessibilityState(true) then
@@ -103,41 +114,35 @@ objectMT.__index = function(self, key)
 
         -- Now for the dynamically generated stuff...
 
-        local getter, doer, parameterized = false, false, false
+        local doer, parameterized = false, false
 
-        local matchName = key:match("^do(%u[%w_]*)$")
-        if matchName then
+        local AXName = key:match("^do(%u[%w_]*)$")
+        if AXName then
             doer = true
         else
-            matchName = key:match("^([%w_]+)WithParameter$")
-            if matchName then
+            AXName = key:match("^([%w_]+)WithParameter$")
+            if AXName then
                 parameterized = true
             else
-                matchName = key
-                getter = true
+                AXName = key
             end
         end
 
-        local formalName = matchName:match("^AX[%w_]+$") and matchName or "AX"..matchName:sub(1,1):upper()..matchName:sub(2)
-
         if doer then
             for _, v in ipairs(objectMT.actionNames(self) or {}) do
-                -- haven't seen actions that don't start with AX, but it's legal as far as I can tell
-                if v == formalName or v == matchName then
+                if v == AXName then
                     return function(self2, ...) return objectMT.performAction(self2, v, ...) end
                 end
             end
         elseif parameterized then
             for _, v in ipairs(objectMT.parameterizedAttributeNames(self) or {}) do
-                -- haven't seen parameterized attributes that don't start with AX, but it's legal as far as I can tell
-                if v == formalName or v == matchName then
+                if v == AXName then
                     return function(self2, ...) return objectMT.parameterizedAttributeValue(self2, v, ...) end
                 end
             end
         else
             for _, v in ipairs(objectMT.attributeNames(self) or {}) do
-                -- haven't seen attributes that don't start with AX, but it's legal as far as I can tell
-                if v == formalName or v == matchName then
+                if v == AXName then
                     return objectMT.attributeValue(self, v)
                 end
             end
@@ -154,30 +159,37 @@ objectMT.__index = function(self, key)
 end
 
 objectMT.__newindex = function(self, key, value)
-    local formalName = key:match("^AX[%w_]+$") and key or "AX"..key:sub(1,1):upper()..key:sub(2)
     for _, v in ipairs(objectMT.attributeNames(self) or {}) do
-        -- haven't seen attributes that don't start with AX, but it's legal as far as I can tell
-        if v == formalName or v == key then
-            local ok, err = self:setAttributeValue(v, value)
-            if not ok then error(err, 2) end
+        if v == key then
+            local ok, err = self:setAttributeValue(v, value) -- luacheck: ignore
+-- undecided if this should generate an error when an accessibility error occurs. it's more "table" like if it
+-- doesn't; otoh table assignment never fail unless you try with a key of `nil` and then it *does* throw an
+-- error... the docs above do say that you should use setAttributeValue if you care about accssibility errors,
+-- so unless/until someone complains I guess I'll leave the next line commented out
+--             if not ok then error(err, 2) end
             return
         end
     end
+-- in this case it's not an attribute they're trying to set, so an error does make sense
     error("attempt to index a " .. USERDATA_TAG .. " value", 2)
 end
 
-objectMT.__call = function(self, cmd, ...)
-    local fn = objectMT.__index(self, cmd)
-    if fn and type(fn) == "function" then
-        return fn(self, ...)
-    elseif fn then
-        return fn
-    elseif cmd:match("^do%u") then
-        error(tostring(cmd) .. " is not a recognized action", 2)
-    else
-        return nil
-    end
-end
+-- too many optional ways to access things was becoming confusing even for me, so commenting this out
+-- it would allow you to use object("AXSomething") for properties, object("doAXSomething") for actions
+-- and object("AXSomethingWithParameter", value) for parameterized attributes.
+--
+-- objectMT.__call = function(self, cmd, ...)
+--     local fn = objectMT.__index(self, cmd)
+--     if fn and type(fn) == "function" then
+--         return fn(self, ...)
+--     elseif fn then
+--         return fn
+--     elseif cmd:match("^do%u") then
+--         error(tostring(cmd) .. " is not a recognized action", 2)
+--     else
+--         return nil
+--     end
+-- end
 
 objectMT.__pairs = function(self)
     local keys = {}
@@ -189,7 +201,7 @@ objectMT.__pairs = function(self)
      return function(_, k)
             local v
             k, v = next(keys, k)
-            if k then v = _[k] end
+            if k then v = self:attributeValue(k) end
             return k, v
         end, self, nil
 end
@@ -252,9 +264,9 @@ end
 ---
 ---    * a table of key-value pairs specifying a more complex criteria. The table should be defined as follows:
 ---      * one or more of the following must be specified (though all specified must match):
----        * `attribute`              -- a string, or table of strings, specifying attributes that the element must support. Strings may be specified with their formal name (e.g. "AXSomething") or informal name (e.g. "something" or "Something").
----        * `action`                 -- a string, or table of strings, specifying actions that the element must be able to perform. Strings may be specified with their formal name (e.g. "AXSomething") or informal name (e.g. "something" or "Something").
----        * `parameterizedAttribute` -- a string, or table of strings, specifying parametrized attributes that the element must support. Strings may be specified with their formal name (e.g. "AXSomething") or informal name (e.g. "something" or "Something").
+---        * `attribute`              -- a string, or table of strings, specifying attributes that the element must support.
+---        * `action`                 -- a string, or table of strings, specifying actions that the element must be able to perform.
+---        * `parameterizedAttribute` -- a string, or table of strings, specifying parametrized attributes that the element must support.
 ---
 ---      * if the `attribute` key is specified, you can use one of the the following to specify a specific value the attribute must equal for a positive match. No more than one of these should be provided. If neither are present, then only the existence of the attributes specified by `attribute` are required.
 ---        * `value`                  -- a value, or table of values, that a specifeid attribute must equal. If it's a table, then only one of the values has to match the attribute value for a positive match. Note that if you specify more than one attribute with the `attribute` key, you must provide at least one value for each attribute in this table (order does not matter, but the match will fail if any atrribute does not match at least one value provided).
@@ -310,34 +322,15 @@ objectMT.matchesCriteria = function(self, criteria)
 
         if thisCriteria.attribute then
             if type(thisCriteria.attribute) ~= "table" then thisCriteria.attribute = { thisCriteria.attribute } end
-            -- convert to formal versions of attribute names, if they aren't already (i.a. AXAttribtue)
-            for i,v in ipairs(thisCriteria.attribute) do
-                if not v:match("^AX") then
-                    thisCriteria.attribute[i] = "AX" .. v:sub(1,1):upper() .. v:sub(2,-1)
-                end
-            end
         end
         if thisCriteria.action then
             if type(thisCriteria.action) ~= "table" then thisCriteria.action = { thisCriteria.action } end
-            -- convert to formal versions of action names, if they aren't already (i.a. AXAction)
-            for i,v in ipairs(thisCriteria.action) do
-                if not v:match("^AX") then
-                    thisCriteria.action[i] = "AX" .. v:sub(1,1):upper() .. v:sub(2,-1)
-                end
-            end
         end
         if thisCriteria.parameterizedAttribute then
             if type(thisCriteria.parameterizedAttribute) ~= "table" then thisCriteria.parameterizedAttribute = { thisCriteria.parameterizedAttribute } end
-            -- convert to formal versions of parameterizedAttribute names, if they aren't already (i.a. AXParameterizedAttribute)
-            for i,v in ipairs(thisCriteria.parameterizedAttribute) do
-                if not v:match("^AX") then
-                    thisCriteria.parameterizedAttribute[i] = "AX" .. v:sub(1,1):upper() .. v:sub(2,-1)
-                end
-            end
         end
         if thisCriteria.value then
             if type(thisCriteria.value) ~= "table" then thisCriteria.value = { thisCriteria.value } end
-            -- values can be anything, so we make no changes...
         end
     end
 
