@@ -1,6 +1,10 @@
 Exploring and Crafting Queries for `hs.axuielement`
 ========================================================
 
+***This document is outdated and the command examples given will *not* work as written. An update to this document is planned after this module is migrated to the Hammerspoon core modules.***
+
+- - -
+
 Manipulating a macOS application through its Accessibility objects can be a confusing task. While many of the standard components used in macOS applications have default attributes and actions enabled, each application can modify or extend these in many different ways.
 
 Each application has an application object which acts as its root... all other objects in an application are descendants of this root, but finding the specific object representing a specific button or specific visual element can be difficult and slow.  The purpose of this document is to provide some examples of how to use this module to locate specific objects within an application and then refine the search until it becomes fast enough that it can be used in a programatic fashion.
