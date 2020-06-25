@@ -756,7 +756,18 @@ objectMT.elementSearch = function(self, callback, criteria, namedModifiers)
 
     -- check to see if criteria left off and second arg is actually the namedModifiers table
     if type(namedModifiers) == "nil" and type(criteria) == "table" and not (getmetatable(criteria) or {}).__call then
-        criteria, namedModifiers = nil, criteria
+        -- verify criteria "table" is actually namedMods and not a mistake on the users part (esp since we used to take a table
+        -- for criteria)
+        local isGoodForNM = true
+        for k,_ in pairs(criteria) do
+            if type(namedModifierDefaults[k]) == "nil" then
+                isGoodForNM = false
+                break
+            end
+        end
+        if isGoodForNM then
+            criteria, namedModifiers = nil, criteria
+        end -- else let error out for bad criteria below
     end
 
     namedModifiers = namedModifiers or {}
