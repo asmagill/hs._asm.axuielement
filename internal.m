@@ -17,21 +17,21 @@ const char *AXErrorAsString(AXError theError) {
     switch(theError) {
         case kAXErrorSuccess:                           ans = "No error occurred" ; break ;
         case kAXErrorFailure:                           ans = "A system error occurred" ; break ;
-        case kAXErrorIllegalArgument:                   ans = "Illegal argument." ; break ;
-        case kAXErrorInvalidUIElement:                  ans = "AXUIElementRef is invalid." ; break ;
-        case kAXErrorInvalidUIElementObserver:          ans = "Not a valid observer." ; break ;
-        case kAXErrorCannotComplete:                    ans = "Messaging failed." ; break ;
-        case kAXErrorAttributeUnsupported:              ans = "Attribute is not supported by target." ; break ;
-        case kAXErrorActionUnsupported:                 ans = "Action is not supported by target." ; break ;
-        case kAXErrorNotificationUnsupported:           ans = "Notification is not supported by target." ; break ;
-        case kAXErrorNotImplemented:                    ans = "Function or method not implemented." ; break ;
-        case kAXErrorNotificationAlreadyRegistered:     ans = "Notification has already been registered." ; break ;
-        case kAXErrorNotificationNotRegistered:         ans = "Notification is not registered yet." ; break ;
+        case kAXErrorIllegalArgument:                   ans = "Illegal argument" ; break ;
+        case kAXErrorInvalidUIElement:                  ans = "AXUIElementRef is invalid" ; break ;
+        case kAXErrorInvalidUIElementObserver:          ans = "Not a valid observer" ; break ;
+        case kAXErrorCannotComplete:                    ans = "Messaging failed" ; break ;
+        case kAXErrorAttributeUnsupported:              ans = "Attribute is not supported by target" ; break ;
+        case kAXErrorActionUnsupported:                 ans = "Action is not supported by target" ; break ;
+        case kAXErrorNotificationUnsupported:           ans = "Notification is not supported by target" ; break ;
+        case kAXErrorNotImplemented:                    ans = "Function or method not implemented" ; break ;
+        case kAXErrorNotificationAlreadyRegistered:     ans = "Notification has already been registered" ; break ;
+        case kAXErrorNotificationNotRegistered:         ans = "Notification is not registered yet" ; break ;
         case kAXErrorAPIDisabled:                       ans = "The accessibility API is disabled" ; break ;
-        case kAXErrorNoValue:                           ans = "Requested value does not exist." ; break ;
-        case kAXErrorParameterizedAttributeUnsupported: ans = "Parameterized attribute is not supported." ; break ;
-        case kAXErrorNotEnoughPrecision:                ans = "Not enough precision." ; break ;
-        default:                                        ans = "Unrecognized error occured." ; break ;
+        case kAXErrorNoValue:                           ans = "Requested value does not exist" ; break ;
+        case kAXErrorParameterizedAttributeUnsupported: ans = "Parameterized attribute is not supported" ; break ;
+        case kAXErrorNotEnoughPrecision:                ans = "Not enough precision" ; break ;
+        default:                                        ans = "Unrecognized error occured" ; break ;
     }
     return ans ;
 }
@@ -327,7 +327,7 @@ static int axuielement_getAttributeValue(lua_State *L) {
 ///  * To include attributes which exist but are currently unset, you need to specify `includeErrors` as true.
 ///    * attributes for which no value is currently assigned will be given a table value with the following key-value pairs:
 ///      * `_code` = -25212
-///      * `error` = "Requested value does not exist."
+///      * `error` = "Requested value does not exist"
 static int axuielement_getAllAttributeValues(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBOOLEAN | LS_TOPTIONAL, LS_TBREAK] ;

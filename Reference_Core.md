@@ -244,7 +244,7 @@ Notes:
  * To include attributes which exist but are currently unset, you need to specify `includeErrors` as true.
    * attributes for which no value is currently assigned will be given a table value with the following key-value pairs:
      * `_code` = -25212
-     * `error` = "Requested value does not exist."
+     * `error` = "Requested value does not exist"
 
 - - -
 
