@@ -4,7 +4,7 @@
 ///
 /// This submodule allows you to create observers for accessibility elements and be notified when they trigger notifications. Not all notifications are supported by all elements and not all elements support notifications, so some trial and error will be necessary, but for compliant applications, this can allow your code to be notified when an application's user interface changes in some way.
 
-#define DEBUGGING_METHODS
+//#define DEBUGGING_METHODS switched to `#if defined(HS_EXTERNAL_MODULE)` which tracks a definition included in my Makefiles (but not the Hammerspoon one)
 
 static int refTable = LUA_NOREF ;
 
@@ -383,7 +383,7 @@ static int axobserver_watchedElements(lua_State *L) {
     return 1 ;
 }
 
-#ifdef DEBUGGING_METHODS
+#if defined(HS_EXTERNAL_MODULE)
 static int axobserver_internalDetails(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     CFMutableDictionaryRef details = observerDetails ;
@@ -522,7 +522,7 @@ static const luaL_Reg userdata_metaLib[] = {
     {"removeWatcher", axobserver_removeWatchedElement},
     {"watching",      axobserver_watchedElements},
 
-#ifdef DEBUGGING_METHODS
+#if defined(HS_EXTERNAL_MODULE)
     {"_internals",    axobserver_internalDetails},
 #endif
 
@@ -535,7 +535,7 @@ static const luaL_Reg userdata_metaLib[] = {
 // Functions for returned object when module loads
 static luaL_Reg moduleLib[] = {
     {"new",        axobserver_new},
-#ifdef DEBUGGING_METHODS
+#if defined(HS_EXTERNAL_MODULE)
     {"_internals", axobserver_internalDetails},
 #endif
     {NULL,         NULL}

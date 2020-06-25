@@ -455,7 +455,7 @@ static int axuielement_isAttributeSettable(lua_State *L) {
 ///  * a boolean value indicating whether or not the accessibility object is still valid or nil and an error string if any other accessibility error occurred
 ///
 /// Notes:
-///  * an accessibilityObject can become invalid for a variety of reasons, including but not limited to the element referred to no longer being available (e.g. an element referring to a window or one of its children that has been closed) or the application terminating.
+///  * an accessibilityObject can become invalid for a variety of reasons, including but not limited to the element referred to no longer being available (e.g. an element referring to a window or one of its descendants that has been closed) or the application terminating.
 static int axuielement_isValid(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ;
