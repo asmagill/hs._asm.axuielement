@@ -57,7 +57,7 @@ static void purgeWatchers(const void *key, const void *value, void *context) {
 }
 
 static void cleanupAXObserver(AXObserverRef observer, CFMutableDictionaryRef details) {
-    LuaSkin *skin = [LuaSkin sharedWithState:NULL] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     _lua_stackguard_entry(skin.L);
 
     int callbackRef = [(__bridge NSNumber *)CFDictionaryGetValue(details, keyCallbackRef) intValue] ;
@@ -84,7 +84,7 @@ static void cleanupAXObserver(AXObserverRef observer, CFMutableDictionaryRef det
 }
 
 static void observerCallback(AXObserverRef observer, AXUIElementRef element, CFStringRef notification, CFDictionaryRef info, __unused void *refcon) {
-    LuaSkin   *skin = [LuaSkin sharedWithState:NULL] ;
+    LuaSkin   *skin = [LuaSkin shared] ;
     _lua_stackguard_entry(skin.L);
     lua_State *L    = skin.L ;
 
@@ -128,7 +128,7 @@ static void observerCallback(AXObserverRef observer, AXUIElementRef element, CFS
 ///  * If you already have the `hs.application` object for an application, you can get its process ID with `hs.application:pid()`
 ///  * If you already have an `hs.axuielement` from the application you wish to observe (it doesn't have to be the application axuielement object, just one belonging to the application), you can get the process ID with `hs.axuielement:pid()`.
 static int axobserver_new(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TNUMBER | LS_TINTEGER, LS_TBREAK] ;
     pid_t         appPid   = (pid_t)lua_tointeger(L, 1) ;
     AXObserverRef observer = NULL ;
@@ -158,7 +158,7 @@ static int axobserver_new(lua_State *L) {
 /// Notes:
 ///  * This method does nothing if the observer is already running
 static int axobserver_start(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK] ;
     AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
     CFMutableDictionaryRef details  = CFDictionaryGetValue(observerDetails, observer) ;
@@ -185,7 +185,7 @@ static int axobserver_start(lua_State *L) {
 /// Notes:
 ///  * This method does nothing if the observer is not currently running
 static int axobserver_stop(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK] ;
     AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
     CFMutableDictionaryRef details  = CFDictionaryGetValue(observerDetails, observer) ;
@@ -209,7 +209,7 @@ static int axobserver_stop(lua_State *L) {
 /// Returns:
 ///  * a boolean value indicating whether or not the observer is currently active.
 static int axobserver_isRunning(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK] ;
     AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
     CFMutableDictionaryRef details  = CFDictionaryGetValue(observerDetails, observer) ;
@@ -235,7 +235,7 @@ static int axobserver_isRunning(lua_State *L) {
 ///    * a string specifying the specific notification which was received
 ///    * a table containing key-value pairs with more information about the notification, if the element and notification type provide it. Commonly this will be an empty table indicating that no additional detail was provided.
 static int axobserver_callback(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TFUNCTION | LS_TNIL | LS_TOPTIONAL, LS_TBREAK] ;
     AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
     CFMutableDictionaryRef details  = CFDictionaryGetValue(observerDetails, observer) ;
@@ -276,7 +276,7 @@ static int axobserver_callback(lua_State *L) {
 ///  * if the specified element and notification string are already registered, this method does nothing.
 ///  * the notification string is application dependent and can be any string that the application developers choose; some common ones are found in `hs.axuielement.observer.notifications`, but the list is not exhaustive nor is an application or element required to provide them.
 static int axobserver_addWatchedElement(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG,
                     LS_TUSERDATA, USERDATA_TAG,
                     LS_TSTRING,
@@ -319,7 +319,7 @@ static int axobserver_addWatchedElement(lua_State *L) {
 /// Notes:
 ///  * if the specified element and notification string are not currently registered with the observer, this method does nothing.
 static int axobserver_removeWatchedElement(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG,
                     LS_TUSERDATA, USERDATA_TAG,
                     LS_TSTRING,
@@ -359,7 +359,7 @@ static int axobserver_removeWatchedElement(lua_State *L) {
 ///  * If an element is specified, then the table returned will contain a list of strings specifying the specific notifications that the observer is watching that element for.
 ///  * If no argument is specified, then the table will contain key-value pairs in which each key will be an `hs.axuielement` that is being observed and the corresponding value will be a table containing a list of strings specifying the specific notifications that the observer is watching for from from that element.
 static int axobserver_watchedElements(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK | LS_TVARARG] ;
     AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
     CFMutableDictionaryRef details  = CFDictionaryGetValue(observerDetails, observer) ;
@@ -385,7 +385,7 @@ static int axobserver_watchedElements(lua_State *L) {
 
 #if defined(HS_EXTERNAL_MODULE)
 static int axobserver_internalDetails(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     CFMutableDictionaryRef details = observerDetails ;
     if (lua_gettop(L) > 0) {
         [skin checkArgs:LS_TUSERDATA, OBSERVER_TAG, LS_TBREAK] ;
@@ -406,7 +406,7 @@ static int axobserver_internalDetails(lua_State *L) {
 /// Notes:
 ///  * Notifications are application dependent and can be any string that the application developers choose; this list provides the suggested notification names found within the macOS Framework headers, but the list is not exhaustive nor is an application or element required to provide them.
 static int pushNotificationsTable(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     lua_newtable(L) ;
 // Focus notifications
     [skin pushNSObject:(__bridge NSString *)kAXMainWindowChangedNotification] ;       lua_setfield(L, -2, "mainWindowChanged") ;
@@ -460,14 +460,14 @@ static int pushNotificationsTable(lua_State *L) {
 #pragma mark - Hammerspoon/Lua Infrastructure
 
 static int userdata_tostring(lua_State* L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
 //     AXObserverRef observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
     [skin pushNSObject:[NSString stringWithFormat:@"%s: (%p)", OBSERVER_TAG, lua_topointer(L, 1)]] ;
     return 1 ;
 }
 
 static int userdata_gc(lua_State* L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     AXObserverRef          observer = get_axobserverref(L, 1, OBSERVER_TAG) ;
     CFMutableDictionaryRef details  = CFDictionaryGetValue(observerDetails, observer) ;
 
@@ -548,7 +548,7 @@ static const luaL_Reg module_metaLib[] = {
 } ;
 
 int luaopen_hs_axuielement_observer(lua_State* L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     refTable = [skin registerLibraryWithObject:OBSERVER_TAG
                                      functions:moduleLib
                                  metaFunctions:module_metaLib

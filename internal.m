@@ -80,12 +80,11 @@ static int errorWrapper(lua_State *L, NSString *where, NSString *what, AXError e
 /// Notes:
 ///  * if `windowObject` is a string or number, only the first item found with `hs.window.find` will be used by this function to create an axuielementObject.
 static int axuielement_getWindowElement(lua_State *L)      {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     // vararg here to mimic original behavior and allow constructs to use `hs.window(...)` as arg as this may
     // return more than one result
     [skin checkArgs:LS_TUSERDATA, "hs.window", LS_TBREAK | LS_TVARARG] ;
-    NSObject *object = [skin toNSObjectAtIndex:1] ;
-    AXUIElementRef ref = getElementRefPropertyFromClassObject(object) ;
+    AXUIElementRef ref = get_axuielementref(L, 1, "hs.window") ;
     if (ref) {
         pushAXUIElement(L, ref) ;
         CFRelease(ref) ;
@@ -108,12 +107,11 @@ static int axuielement_getWindowElement(lua_State *L)      {
 /// Notes:
 ///  * if `applicationObject` is a string or number, only the first item found with `hs.application.find` will be used by this function to create an axuielementObject.
 static int axuielement_getApplicationElement(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     // vararg here to mimic original behavior and allow constructs to use `hs.application(...)` as arg as this may
     // return more than one result
     [skin checkArgs:LS_TUSERDATA, "hs.application", LS_TBREAK | LS_TVARARG] ;
-    NSObject *object = [skin toNSObjectAtIndex:1] ;
-    AXUIElementRef ref = getElementRefPropertyFromClassObject(object) ;
+    AXUIElementRef ref = get_axuielementref(L, 1, "hs.application") ;
     if (ref) {
         pushAXUIElement(L, ref) ;
         CFRelease(ref) ;
@@ -133,7 +131,7 @@ static int axuielement_getApplicationElement(lua_State *L) {
 /// Returns:
 ///  * the axuielementObject for the system attributes
 static int axuielement_getSystemWideElement(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TBREAK] ;
     AXUIElementRef value = AXUIElementCreateSystemWide() ;
     pushAXUIElement(L, value) ;
@@ -151,7 +149,7 @@ static int axuielement_getSystemWideElement(lua_State *L) {
 /// Returns:
 ///  * an axuielementObject for the application specified, or nil if it cannot be determined
 static int axuielement_getApplicationElementForPID(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TNUMBER, LS_TBREAK] ;
     pid_t thePid = (pid_t)luaL_checkinteger(L, 1) ;
     AXUIElementRef value = AXUIElementCreateApplication(thePid) ;
@@ -178,7 +176,7 @@ static int axuielement_getApplicationElementForPID(lua_State *L) {
 /// Returns:
 ///  * a new userdata object representing a new reference to the Accessibility object.
 static int axuielement_duplicateReference(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     pushAXUIElement(L, theRef) ;
@@ -198,7 +196,7 @@ static int axuielement_duplicateReference(lua_State *L) {
 /// Notes:
 ///  * Common attribute names can be found in the [hs.axuielement.attributes](#attributes) tables; however, this method will list only those names which are supported by this object, and is not limited to just those in the referenced table.
 static int axuielement_getAttributeNames(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     CFArrayRef attributeNames ;
@@ -231,7 +229,7 @@ static int axuielement_getAttributeNames(lua_State *L) {
 /// Notes:
 ///  * Common action names can be found in the [hs.axuielement.actions](#actions) table; however, this method will list only those names which are supported by this object, and is not limited to just those in the referenced table.
 static int axuielement_getActionNames(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     CFArrayRef attributeNames ;
@@ -264,7 +262,7 @@ static int axuielement_getActionNames(lua_State *L) {
 /// Notes:
 ///  * The action descriptions are provided by the target application; as such their accuracy and usefulness rely on the target application's developers.
 static int axuielement_getActionDescription(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TSTRING, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     NSString *action = [skin toNSObjectAtIndex:2] ;
@@ -293,7 +291,7 @@ static int axuielement_getActionDescription(lua_State *L) {
 /// Returns:
 ///  * the current value of the attribute, nil if the attribute has no value, or nil and an error string if an accessibility error occurred
 static int axuielement_getAttributeValue(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TSTRING, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     NSString *attribute = [skin toNSObjectAtIndex:2] ;
@@ -329,7 +327,7 @@ static int axuielement_getAttributeValue(lua_State *L) {
 ///      * `_code` = -25212
 ///      * `error` = "Requested value does not exist"
 static int axuielement_getAllAttributeValues(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBOOLEAN | LS_TOPTIONAL, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     BOOL includeErrors = lua_gettop(L) == 2 ? (BOOL)lua_toboolean(L, 2) : NO ;
@@ -372,7 +370,7 @@ static int axuielement_getAllAttributeValues(lua_State *L) {
 /// Returns:
 ///  * the number of items in the value for the attribute, if it is an array, or nil and an error string if an accessibility error occurred
 static int axuielement_getAttributeValueCount(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TSTRING, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     NSString *attribute = [skin toNSObjectAtIndex:2] ;
@@ -398,7 +396,7 @@ static int axuielement_getAttributeValueCount(lua_State *L) {
 /// Returns:
 ///  * an array of the names of all parameterized attributes supported by the axuielementObject or nil and an error string if an accessibility error occurred
 static int axuielement_getParameterizedAttributeNames(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     CFArrayRef attributeNames ;
@@ -428,7 +426,7 @@ static int axuielement_getParameterizedAttributeNames(lua_State *L) {
 /// Returns:
 ///  * a boolean value indicating whether or not the value of the parameter can be modified or nil and an error string if an accessibility error occurred
 static int axuielement_isAttributeSettable(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TSTRING, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     NSString *attribute = [skin toNSObjectAtIndex:2] ;
@@ -457,7 +455,7 @@ static int axuielement_isAttributeSettable(lua_State *L) {
 /// Notes:
 ///  * an accessibilityObject can become invalid for a variety of reasons, including but not limited to the element referred to no longer being available (e.g. an element referring to a window or one of its descendants that has been closed) or the application terminating.
 static int axuielement_isValid(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     CFTypeRef value ;
@@ -485,7 +483,7 @@ static int axuielement_isValid(lua_State *L) {
 /// Returns:
 ///  * the process ID for the application to which the accessibility object ultimately belongs or nil and an error string if an accessibility error occurred
 static int axuielement_getPid(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     pid_t thePid ;
@@ -513,7 +511,7 @@ static int axuielement_getPid(lua_State *L) {
 /// Notes:
 ///  * The return value only suggests success or failure, but is not a guarantee.  The receiving application may have internal logic which prevents the action from occurring at this time for some reason, even though this method returns success (the axuielementObject).  Contrawise, the requested action may trigger a requirement for a response from the user and thus appear to time out, causing this method to return false or nil.
 static int axuielement_performAction(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TSTRING, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     NSString *action = [skin toNSObjectAtIndex:2] ;
@@ -548,7 +546,7 @@ static int axuielement_performAction(lua_State *L) {
 ///  * If this method is called on an axuielementObject representing an application, the search is restricted to the application.
 ///  * If this method is called on an axuielementObject representing the system-wide element, the search is not restricted to any particular application.  See [hs.axuielement.systemElementAtPosition](#systemElementAtPosition).
 static int axuielement_getElementAtPosition(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TNUMBER | LS_TTABLE, LS_TNUMBER | LS_TOPTIONAL, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     int returnCount = 1 ;
@@ -593,7 +591,7 @@ static int axuielement_getElementAtPosition(lua_State *L) {
 /// Notes:
 ///  * The specific parameter required for a each parameterized attribute is different and is often application specific thus requiring some experimentation. Notes regarding identified parameter types and thoughts on some still being investigated will be provided in the Hammerspoon Wiki, hopefully shortly after this module becomes part of a Hammerspoon release.
 static int axuielement_getParameterizedAttributeValue(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TSTRING, LS_TANY, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     NSString *attribute = [skin toNSObjectAtIndex:2] ;
@@ -625,7 +623,7 @@ static int axuielement_getParameterizedAttributeValue(lua_State *L) {
 /// Returns:
 ///  * the axuielementObject on success; nil and an error string if the attribute could not be set or an accessibility error occurred.
 static int axuielement_setAttributeValue(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TSTRING, LS_TANY, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     NSString *attribute = [skin toNSObjectAtIndex:2] ;
@@ -655,7 +653,7 @@ static int axuielement_setAttributeValue(lua_State *L) {
 /// Notes:
 ///  * An element is considered an application by this method if it has an AXRole of AXApplication and has a process identifier (pid).
 static int axuielement_toHSApplication(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     CFTypeRef value ;
@@ -690,7 +688,7 @@ static int axuielement_toHSApplication(lua_State *L) {
 /// Notes:
 ///  * An element is considered a window by this method if it has an AXRole of AXWindow.
 static int axuielement_toHSWindow(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     CFTypeRef value ;
@@ -723,7 +721,7 @@ static int axuielement_toHSWindow(lua_State *L) {
 ///
 ///  * Setting the value to 0.0 resets the timeout -- if applied to the `systemWideElement`, the global default will be reset to its default value; if applied to another axuielement object, the timeout will be reset to the current global value as applied to the systemWideElement.
 static int axuielement_setTimeout(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, USERDATA_TAG, LS_TNUMBER, LS_TBREAK] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     int returnCount = 1 ;
@@ -749,7 +747,7 @@ static int axuielement_setTimeout(lua_State *L) {
 ///  * This table is provided for reference only and is not intended to be comprehensive.
 ///  * You can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.attributes`
 static int axuielement_pushAttributesTable(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     lua_newtable(L) ;
     [skin pushNSObject:NSAccessibilityActivationPointAttribute] ;                     lua_setfield(L, -2, "activationPoint") ;
     [skin pushNSObject:(__bridge NSString *)kAXAllowedValuesAttribute] ;              lua_setfield(L, -2, "allowedValues") ;
@@ -936,7 +934,7 @@ static int axuielement_pushAttributesTable(lua_State *L) {
 ///
 ///  * Documentation covering what has been discovered through experimentation about paramterized attributes is planned and should be added to the Hammerspoon wiki shortly after this module becomes part of a formal release.
 static int axuielement_pushParamaterizedAttributesTable(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     lua_newtable(L) ;
     [skin pushNSObject:(__bridge NSString *)kAXAttributedStringForRangeParameterizedAttribute] ;  lua_setfield(L, -2, "attributedStringForRange") ;
     [skin pushNSObject:(__bridge NSString *)kAXBoundsForRangeParameterizedAttribute] ;            lua_setfield(L, -2, "boundsForRange") ;
@@ -974,7 +972,7 @@ static int axuielement_pushParamaterizedAttributesTable(lua_State *L) {
 ///  * this table is provided for reference only and is not intended to be comprehensive.
 ///  * you can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.actions`
 static int axuielement_pushActionsTable(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     lua_newtable(L) ;
     [skin pushNSObject:(__bridge NSString *)kAXCancelAction] ;          lua_setfield(L, -2, "cancel") ;
     [skin pushNSObject:(__bridge NSString *)kAXConfirmAction] ;         lua_setfield(L, -2, "confirm") ;
@@ -998,7 +996,7 @@ static int axuielement_pushActionsTable(lua_State *L) {
 ///  * this table is provided for reference only and is not intended to be comprehensive.
 ///  * you can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.roles`
 static int axuielement_pushRolesTable(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     lua_newtable(L) ;
     [skin pushNSObject:(__bridge NSString *)kAXApplicationRole] ;        lua_setfield(L, -2, "application") ;
     [skin pushNSObject:(__bridge NSString *)kAXBrowserRole] ;            lua_setfield(L, -2, "browser") ;
@@ -1075,7 +1073,7 @@ static int axuielement_pushRolesTable(lua_State *L) {
 ///  * this table is provided for reference only and is not intended to be comprehensive.
 ///  * you can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.subroles`
 static int axuielement_pushSubrolesTable(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     lua_newtable(L) ;
     [skin pushNSObject:(__bridge NSString *)kAXApplicationDockItemSubrole] ;     lua_setfield(L, -2, "applicationDockItem") ;
     [skin pushNSObject:(__bridge NSString *)kAXCloseButtonSubrole] ;             lua_setfield(L, -2, "closeButton") ;
@@ -1135,7 +1133,7 @@ static int axuielement_pushSubrolesTable(lua_State *L) {
 ///  * this table is provided for reference only and may not be comprehensive.
 ///  * you can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.orientations`
 static int axuielement_pushOrientationsTable(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     lua_newtable(L) ;
     [skin pushNSObject:(__bridge NSString *)kAXHorizontalOrientationValue] ; lua_setfield(L, -2, "horizontal") ;
     [skin pushNSObject:(__bridge NSString *)kAXVerticalOrientationValue] ;   lua_setfield(L, -2, "vertical") ;
@@ -1151,7 +1149,7 @@ static int axuielement_pushOrientationsTable(lua_State *L) {
 ///  * this table is provided for reference only and may not be comprehensive.
 ///  * you can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.sortDirections`
 static int axuielement_pushSortDirectionsTable(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     lua_newtable(L) ;
     [skin pushNSObject:(__bridge NSString *)kAXAscendingSortDirectionValue] ;  lua_setfield(L, -2, "ascending") ;
     [skin pushNSObject:(__bridge NSString *)kAXDescendingSortDirectionValue] ; lua_setfield(L, -2, "descending") ;
@@ -1167,7 +1165,7 @@ static int axuielement_pushSortDirectionsTable(lua_State *L) {
 ///  * this table is provided for reference only and may not be comprehensive.
 ///  * you can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.rulerMarkers`
 static int axuielement_pushRulerMarkerTypesTable(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     lua_newtable(L) ;
     [skin pushNSObject:NSAccessibilityCenterTabStopMarkerTypeValue] ;   lua_setfield(L, -2, "centerTabStop") ;
     [skin pushNSObject:NSAccessibilityDecimalTabStopMarkerTypeValue] ;  lua_setfield(L, -2, "decimalTabStop") ;
@@ -1188,7 +1186,7 @@ static int axuielement_pushRulerMarkerTypesTable(lua_State *L) {
 ///  * this table is provided for reference only and may not be comprehensive.
 ///  * you can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.units`
 static int axuielement_pushUnitsTable(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     lua_newtable(L) ;
     [skin pushNSObject:NSAccessibilityCentimetersUnitValue] ; lua_setfield(L, -2, "centimeters") ;
     [skin pushNSObject:NSAccessibilityInchesUnitValue] ;      lua_setfield(L, -2, "inches") ;
@@ -1201,7 +1199,7 @@ static int axuielement_pushUnitsTable(lua_State *L) {
 #pragma mark - Hammerspoon/Lua Infrastructure
 
 static int userdata_tostring(lua_State* L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     AXUIElementRef theRef = get_axuielementref(L, 1, USERDATA_TAG) ;
     CFTypeRef value ;
     AXError errorState = AXUIElementCopyAttributeValue(theRef, (__bridge CFStringRef)@"AXRole", &value) ;
@@ -1279,7 +1277,7 @@ static luaL_Reg moduleLib[] = {
 // } ;
 
 int luaopen_hs_axuielement_internal(lua_State* L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     refTable = [skin registerLibraryWithObject:USERDATA_TAG
                                      functions:moduleLib
                                  metaFunctions:nil

@@ -53,7 +53,7 @@ int pushAXTextMarkerRange(lua_State *L, AXTextMarkerRangeRef theElement) {
 /// Notes:
 ///  * This function is included primarily for testing and debugging purposes -- in general you will probably never use this constructor; AXTextMarker objects appear to be mostly application dependant and have no meaning external to the application from which it was created.
 static int axtextmarker_newMarker(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TSTRING, LS_TBREAK] ;
 
     if (AXTextMarkerCreate != NULL) {
@@ -103,7 +103,7 @@ static int axtextmarker_newMarker(lua_State *L) {
 ///
 ///  * The specific attributes and parameterized attributes supported by a given application differ and can be discovered with the `hs.axuielement:getAttributeNames` and `hs.axuielement:getParameterizedAttributeNames` methods.
 static int axtextmarker_newRange(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, AXTEXTMARKER_TAG, LS_TUSERDATA, AXTEXTMARKER_TAG, LS_TBREAK] ;
     AXTextMarkerRef startMarker = get_axtextmarkerref(L, 1, AXTEXTMARKER_TAG) ;
     AXTextMarkerRef endMarker   = get_axtextmarkerref(L, 2, AXTEXTMARKER_TAG) ;
@@ -132,7 +132,7 @@ static int axtextmarker_newRange(lua_State *L) {
 //
 // This is for debugging purposes and is not publicaly documented
 static int axtextmarker_AXTextMarkerGetTypeID(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TBREAK] ;
 
     if (AXTextMarkerGetTypeID != NULL) {
@@ -151,7 +151,7 @@ static int axtextmarker_AXTextMarkerGetTypeID(lua_State *L) {
 //
 // This is for debugging purposes and is not publicaly documented
 static int axtextmarker_AXTextMarkerRangeGetTypeID(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TBREAK] ;
 
     if (AXTextMarkerRangeGetTypeID != NULL) {
@@ -179,7 +179,7 @@ static int axtextmarker_AXTextMarkerRangeGetTypeID(lua_State *L) {
 ///
 /// * This is for debugging purposes and is not expected to be used often.
 static int axtextmarker_availabilityCheck(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TBREAK] ;
 
     lua_newtable(L) ;
@@ -215,7 +215,7 @@ static int axtextmarker_availabilityCheck(lua_State *L) {
 ///
 ///  * As the data is application specific, it is unlikely that you will use this method often; it is included primarily for testing and debugging purposes.
 static int axtextmarker_markerBytes(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, AXTEXTMARKER_TAG, LS_TBREAK] ;
     AXTextMarkerRef marker = get_axtextmarkerref(L, 1, AXTEXTMARKER_TAG) ;
 
@@ -243,7 +243,7 @@ static int axtextmarker_markerBytes(lua_State *L) {
 /// Notes:
 ///  * As the data is application specific, it is unlikely that you will use this method often; it is included primarily for testing and debugging purposes.
 static int axtextmarker_markerLength(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, AXTEXTMARKER_TAG, LS_TBREAK] ;
     AXTextMarkerRef marker = get_axtextmarkerref(L, 1, AXTEXTMARKER_TAG) ;
 
@@ -267,7 +267,7 @@ static int axtextmarker_markerLength(lua_State *L) {
 /// Returns:
 ///  *  the starting marker for an axTextMarkerRangeObject
 static int axtextmarker_rangeStartMarker(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, AXTEXTMRKRNG_TAG, LS_TBREAK] ;
     AXTextMarkerRangeRef range = get_axtextmarkerrangeref(L, 1, AXTEXTMRKRNG_TAG) ;
 
@@ -299,7 +299,7 @@ static int axtextmarker_rangeStartMarker(lua_State *L) {
 /// Returns:
 ///  *  the ending marker for an axTextMarkerRangeObject
 static int axtextmarker_rangeEndMarker(lua_State *L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     [skin checkArgs:LS_TUSERDATA, AXTEXTMRKRNG_TAG, LS_TBREAK] ;
     AXTextMarkerRangeRef range = get_axtextmarkerrangeref(L, 1, AXTEXTMRKRNG_TAG) ;
 
@@ -324,7 +324,7 @@ static int axtextmarker_rangeEndMarker(lua_State *L) {
 #pragma mark - Hammerspoon/Lua Infrastructure
 
 static int userdata_tostring(lua_State* L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
 
     [skin pushNSObject:[NSString stringWithFormat:@"%s: (%p)",
         (luaL_testudata(L, 1, AXTEXTMARKER_TAG) ? AXTEXTMARKER_TAG : AXTEXTMRKRNG_TAG),
@@ -396,8 +396,8 @@ static luaL_Reg moduleLib[] = {
 //     {NULL,   NULL}
 // } ;
 
-int luaopen_hs_axuielement_axtextmarker(lua_State* L) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+int luaopen_hs_axuielement_axtextmarker(__unused lua_State* L) {
+    LuaSkin *skin = [LuaSkin shared] ;
     refTable = [skin registerLibraryWithObject:AXTEXTMARKER_TAG
                                      functions:moduleLib
                                  metaFunctions:nil

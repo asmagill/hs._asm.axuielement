@@ -3,36 +3,36 @@
 // keep this current with Hammerspoon's method for creating new hs.application and hs.window objects
 
 @protocol PlaceHoldersHSuicoreMethods
-- (NSObject *)initWithPid:(pid_t)pid withState:(lua_State *)L ;
+- (NSObject *)initWithPid:(pid_t)pid ;
 - (NSObject *)initWithAXUIElementRef:(AXUIElementRef)winRef ;
 @end
 
 extern AXError _AXUIElementGetWindow(AXUIElementRef, CGWindowID* out) ;
 
-AXUIElementRef getElementRefPropertyFromClassObject(NSObject *object) {
-    AXUIElementRef ref      = NULL ;
-    SEL            selector = NSSelectorFromString(@"elementRef") ;
-
-    if ([object respondsToSelector:selector]) {
-        NSMethodSignature *signature  = [NSMethodSignature signatureWithObjCTypes:"^{__AXUIElement=}16@0:8"] ;
-        NSInvocation      *invocation = [NSInvocation invocationWithMethodSignature:signature] ;
-        [invocation setTarget:object] ;
-        [invocation setSelector:selector] ;
-        [invocation invoke] ;
-        [invocation getReturnValue:&ref] ;
-        if (ref) CFRetain(ref) ;
-    }
-    return ref ;
-}
+// AXUIElementRef getElementRefPropertyFromClassObject(NSObject *object) {
+//     AXUIElementRef ref      = NULL ;
+//     SEL            selector = NSSelectorFromString(@"elementRef") ;
+//
+//     if ([object respondsToSelector:selector]) {
+//         NSMethodSignature *signature  = [NSMethodSignature signatureWithObjCTypes:"^{__AXUIElement=}16@0:8"] ;
+//         NSInvocation      *invocation = [NSInvocation invocationWithMethodSignature:signature] ;
+//         [invocation setTarget:object] ;
+//         [invocation setSelector:selector] ;
+//         [invocation invoke] ;
+//         [invocation getReturnValue:&ref] ;
+//         if (ref) CFRetain(ref) ;
+//     }
+//     return ref ;
+// }
 
 BOOL new_application(lua_State* L, pid_t pid) {
     BOOL isGood = false ;
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     Class HSA = NSClassFromString(@"HSapplication") ;
     if (HSA) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wobjc-messaging-id"
-        NSObject *obj = [[HSA alloc] initWithPid:pid withState:L] ;
+        NSObject *obj = [[HSA alloc] initWithPid:pid] ;
 #pragma clang diagnostic pop
         if (obj) {
             [skin pushNSObject:obj] ;
@@ -41,15 +41,29 @@ BOOL new_application(lua_State* L, pid_t pid) {
             lua_pushnil(L) ;
         }
     } else {
-        [skin logError:[NSString stringWithFormat:@"%s:new_application - HSapplication class not present; may require Hammerspoon upgrade", USERDATA_TAG]] ;
-        lua_pushnil(L) ;
+        AXUIElementRef app = AXUIElementCreateApplication(pid);
+
+        if (app) {
+            AXUIElementRef* appptr = lua_newuserdata(L, sizeof(AXUIElementRef));
+            *appptr = app;
+            luaL_getmetatable(L, "hs.application");
+            lua_setmetatable(L, -2);
+
+            lua_newtable(L);
+            lua_pushinteger(L, pid);
+            lua_setfield(L, -2, "pid");
+            lua_setuservalue(L, -2);
+            isGood =  true ;
+        } else {
+            lua_pushnil(L) ;
+        }
     }
     return isGood ;
 }
 
 BOOL new_window(lua_State* L, AXUIElementRef win) {
     BOOL isGood = false ;
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     Class HSW = NSClassFromString(@"HSwindow") ;
     if (HSW) {
 #pragma clang diagnostic push
@@ -65,8 +79,28 @@ BOOL new_window(lua_State* L, AXUIElementRef win) {
             lua_pushnil(L) ;
         }
     } else {
-        [skin logError:[NSString stringWithFormat:@"%s:new_window - HSapplication class not present; may require Hammerspoon upgrade", USERDATA_TAG]] ;
-        lua_pushnil(L) ;
+        AXUIElementRef* winptr = lua_newuserdata(L, sizeof(AXUIElementRef));
+        *winptr = win;
+
+        luaL_getmetatable(L, "hs.window");
+        lua_setmetatable(L, -2);
+
+        lua_newtable(L);
+
+        pid_t pid;
+        if (AXUIElementGetPid(win, &pid) == kAXErrorSuccess) {
+            lua_pushinteger(L, pid);
+            lua_setfield(L, -2, "pid");
+        }
+
+        CGWindowID winid;
+        AXError err = _AXUIElementGetWindow(win, &winid);
+        if (!err) {
+            lua_pushinteger(L, winid);
+            lua_setfield(L, -2, "id");
+        }
+
+        lua_setuservalue(L, -2);
     }
     return isGood ;
 }
@@ -74,7 +108,7 @@ BOOL new_window(lua_State* L, AXUIElementRef win) {
 // Not sure if the alreadySeen trick is working here, but it hasn't crashed yet... of course I don't think I've found any loops that don't have a userdata object in-between that drops us back to Lua before deciding whether or not to delve deeper, either, so... should be safe in CFDictionary and CFArray, since they toll-free bridge; don't use for others -- fails for setting with AXUIElementRef as key, at least...
 
 static int pushCFTypeHamster(lua_State *L, CFTypeRef theItem, NSMutableDictionary *alreadySeen, int refTable) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
 
     if (!theItem) {
         lua_pushnil(L) ;
@@ -187,7 +221,7 @@ static int pushCFTypeHamster(lua_State *L, CFTypeRef theItem, NSMutableDictionar
 }
 
 static CFTypeRef lua_toCFTypeHamster(lua_State *L, int idx, NSMutableDictionary *seen) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L] ;
+    LuaSkin *skin = [LuaSkin shared] ;
     int index = lua_absindex(L, idx) ;
 
     CFTypeRef value = kCFNull ;
@@ -359,7 +393,7 @@ static CFTypeRef lua_toCFTypeHamster(lua_State *L, int idx, NSMutableDictionary 
 }
 
 int pushCFTypeToLua(lua_State *L, CFTypeRef theItem, int refTable) {
-    LuaSkin *skin = [LuaSkin sharedWithState:L];
+    LuaSkin *skin = [LuaSkin shared];
     NSMutableDictionary *alreadySeen = [[NSMutableDictionary alloc] init] ;
     pushCFTypeHamster(L, theItem, alreadySeen, refTable) ;
     for (id entry in alreadySeen) {

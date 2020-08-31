@@ -15,7 +15,7 @@
 #define get_axtextmarkerref(L, idx, tag) *((AXTextMarkerRef*)luaL_checkudata(L, idx, tag))
 #define get_axtextmarkerrangeref(L, idx, tag) *((AXTextMarkerRangeRef*)luaL_checkudata(L, idx, tag))
 
-extern AXUIElementRef getElementRefPropertyFromClassObject(NSObject *object) ;
+// extern AXUIElementRef getElementRefPropertyFromClassObject(NSObject *object) ;
 
 extern BOOL new_application(lua_State* L, pid_t pid) ;
 extern BOOL new_window(lua_State* L, AXUIElementRef win) ;
