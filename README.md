@@ -18,6 +18,8 @@ This is being integrated into the core Hammerspoon application. This repository 
 
 ### Installation
 
+*See https://github.com/asmagill/hammerspoon_asm/blob/master/README.md for details about building this module as a Universal library*
+
 A precompiled version of this module can be found in this directory with a name along the lines of `axuielement-v1.x.tar.gz`. This can be installed by downloading the file and then expanding it as follows:
 
 ~~~sh
