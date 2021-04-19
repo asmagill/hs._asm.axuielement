@@ -93,7 +93,7 @@ module.observer.notifications  = ls.makeConstantsTable(module.observer.notificat
 ---
 --- Parameters:
 ---  * `x`, `y`     - the x and y coordinates of the screen location to test, provided as separate parameters
----  * `pointTable` - the x and y coordinates of the screen location to test, provided as a point-table, like the one returned by `hs.mouse.getAbsolutePosition`. A point-table is a table with key-value pairs for keys `x` and `y`.
+---  * `pointTable` - the x and y coordinates of the screen location to test, provided as a point-table, like the one returned by `hs.mouse.absolutePosition`. A point-table is a table with key-value pairs for keys `x` and `y`.
 ---
 --- Returns:
 ---  * an axuielementObject for the object at the specified coordinates, or nil if no object could be identified.

@@ -536,7 +536,7 @@ static int axuielement_performAction(lua_State *L) {
 ///
 /// Parameters:
 ///  * `x`, `y`     - the x and y coordinates of the screen location to test, provided as separate parameters
-///  * `pointTable` - the x and y coordinates of the screen location to test, provided as a point-table, like the one returned by `hs.mouse.getAbsolutePosition`. A point-table is a table with key-value pairs for keys `x` and `y`.
+///  * `pointTable` - the x and y coordinates of the screen location to test, provided as a point-table, like the one returned by `hs.mouse.absolutePosition`. A point-table is a table with key-value pairs for keys `x` and `y`.
 ///
 /// Returns:
 ///  * an axuielementObject for the object at the specified coordinates, or nil and an error string if no object could be identified or an accessibility error occurred
