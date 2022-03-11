@@ -96,7 +96,7 @@ axtextmarker._functionCheck() -> table
 ~~~
 Returns a table of the AXTextMarker and AXTextMarkerRange functions that have been discovered and are used within this module.
 
-Paramters:
+Parameters:
  * None
 
 Returns:
@@ -115,7 +115,7 @@ axtextmarker:bytes() -> string | nil, errorString
 ~~~
 Returns a string containing the opaque binary data contained within the axTextMarkerObject
 
-Paramters:
+Parameters:
  * None
 
 Returns:
@@ -138,7 +138,7 @@ axtextmarker:endMarker() -> axTextMarkerObject | nil, errorString
 ~~~
 Returns the ending marker for an axTextMarkerRangeObject
 
-Paramters:
+Parameters:
  * None
 
 Returns:
@@ -152,7 +152,7 @@ axtextmarker:length() -> integer | nil, errorString
 ~~~
 Returns an integer specifying the number of bytes in the data portion of the axTextMarkerObject.
 
-Paramters:
+Parameters:
  * None
 
 Returns:
@@ -169,7 +169,7 @@ axtextmarker:startMarker() -> axTextMarkerObject | nil, errorString
 ~~~
 Returns the starting marker for an axTextMarkerRangeObject
 
-Paramters:
+Parameters:
  * None
 
 Returns:

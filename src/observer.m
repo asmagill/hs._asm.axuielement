@@ -218,12 +218,12 @@ static int axobserver_isRunning(lua_State *L) {
     return 1 ;
 }
 
-/// hs.axuielement.observer:callback([fn | nil]) -> observerObject | fn | nil
+/// hs.axuielement.observer:callback([fn]) -> observerObject | fn | nil
 /// Method
 /// Get or set the callback for the observer.
 ///
 /// Parameters:
-///  * `fn` - a function, or an explicit nil to remove, specifying the callback to the observer will invoke when the assigned elements generate notifications.
+///  * `fn` - a function, or an explicit nil to remove, specifying the callback function the observer will invoke when the assigned elements generate notifications.
 ///
 /// Returns:
 ///  * If an argument is provided, the observerObject; otherwise the current value.
@@ -547,7 +547,7 @@ static const luaL_Reg module_metaLib[] = {
     {NULL,   NULL}
 } ;
 
-int luaopen_hs_axuielement_observer(lua_State* L) {
+int luaopen_hs_libaxuielementobserver(lua_State* L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     refTable = [skin registerLibraryWithObject:OBSERVER_TAG
                                      functions:moduleLib

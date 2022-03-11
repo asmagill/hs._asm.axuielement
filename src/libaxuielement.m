@@ -535,15 +535,15 @@ static int axuielement_performAction(lua_State *L) {
 /// Returns the accessibility object at the specified position on the screen. The top-left corner of the primary screen is 0, 0.
 ///
 /// Parameters:
-///  * `x`, `y`     - the x and y coordinates of the screen location to test, provided as separate parameters
-///  * `pointTable` - the x and y coordinates of the screen location to test, provided as a point-table, like the one returned by `hs.mouse.absolutePosition`. A point-table is a table with key-value pairs for keys `x` and `y`.
+///  * `x` - the x coordinate of the screen location to test. If this parameter is provided, then the `y` parameter must also be provided and the `pointTable` parameter must not be provided.
+///  * `y` - the y coordinate of the screen location to test. This parameter is required if the `x` parameter is provided.
+///  * `pointTable` - the x and y coordinates of the screen location to test provided as a point-table, like the one returned by `hs.mouse.getAbsolutePosition` (a point-table is a table with key-value pairs for keys `x` and `y`). If this parameter is provided, then separate `x` and `y` parameters must not also be present.
 ///
 /// Returns:
 ///  * an axuielementObject for the object at the specified coordinates, or nil and an error string if no object could be identified or an accessibility error occurred
 ///
 /// Notes:
 ///  * This method can only be called on an axuielementObject that represents an application or the system-wide element (see [hs.axuielement.systemWideElement](#systemWideElement)).
-///
 ///  * This function does hit-testing based on window z-order (that is, layering). If one window is on top of another window, the returned accessibility object comes from whichever window is topmost at the specified location.
 ///  * If this method is called on an axuielementObject representing an application, the search is restricted to the application.
 ///  * If this method is called on an axuielementObject representing the system-wide element, the search is not restricted to any particular application.  See [hs.axuielement.systemElementAtPosition](#systemElementAtPosition).
@@ -720,7 +720,6 @@ static int axuielement_toHSWindow(lua_State *L) {
 /// Notes:
 ///  * To change the global timeout affecting all queries on elements which do not have a specific timeout set, use this method on the systemwide element (see [hs.axuielement.systemWideElement](#systemWideElement).
 ///  * Changing the timeout value for an axuielement object only changes the value for that specific element -- other axuieleement objects that may refer to the identical accessibiity item are not affected.
-///
 ///  * Setting the value to 0.0 resets the timeout -- if applied to the `systemWideElement`, the global default will be reset to its default value; if applied to another axuielement object, the timeout will be reset to the current global value as applied to the systemWideElement.
 static int axuielement_setTimeout(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
@@ -931,9 +930,7 @@ static int axuielement_pushAttributesTable(lua_State *L) {
 /// Notes:
 ///  * this table is provided for reference only and is not intended to be comprehensive.
 ///  * you can view the contents of this table from the Hammerspoon console by typing in `hs.axuielement.parameterizedAttributes`
-///
 ///  * Parameterized attributes are attributes that take an argument when querying the element. There is very little documentation available for most of these and application developers can implement their own for which we may never be able to get any documentation. This table contains parameterized attribute names that are defined within the Apple documentation and a few others that have been discovered.
-///
 ///  * Documentation covering what has been discovered through experimentation about paramterized attributes is planned and should be added to the Hammerspoon wiki shortly after this module becomes part of a formal release.
 static int axuielement_pushParamaterizedAttributesTable(lua_State *L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
@@ -1278,14 +1275,14 @@ static luaL_Reg moduleLib[] = {
 //     {NULL,   NULL}
 // } ;
 
-int luaopen_hs_axuielement_internal(lua_State* L) {
+int luaopen_hs_libaxuielement(lua_State* L) {
     LuaSkin *skin = [LuaSkin sharedWithState:L] ;
     refTable = [skin registerLibraryWithObject:USERDATA_TAG
                                      functions:moduleLib
                                  metaFunctions:nil
                                objectFunctions:userdata_metaLib] ;
 
-    luaopen_hs_axuielement_observer(L) ;     lua_setfield(L, -2, "observer") ;
+    luaopen_hs_libaxuielementobserver(L) ;     lua_setfield(L, -2, "observer") ;
     luaopen_hs_axuielement_axtextmarker(L) ; lua_setfield(L, -2, "axtextmarker") ;
 
 // For reference, since the object __init wrapper in init.lua and the keys for elementSearch don't
