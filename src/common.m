@@ -174,9 +174,9 @@ static int pushCFTypeHamster(lua_State *L, CFTypeRef theItem, NSMutableDictionar
         pushAXUIElement(L, theItem) ;
     } else if (theType == AXObserverGetTypeID()) {
         pushAXObserver(L, (AXObserverRef)theItem) ;
-    } else if (AXTextMarkerGetTypeID != NULL      && theType == AXTextMarkerGetTypeID()) {
+    } else if (theType == AXTextMarkerGetTypeID()) {
         pushAXTextMarker(L, theItem) ;
-    } else if (AXTextMarkerRangeGetTypeID != NULL && theType == AXTextMarkerRangeGetTypeID()) {
+    } else if (theType == AXTextMarkerRangeGetTypeID()) {
         pushAXTextMarkerRange(L, theItem) ;
     } else {
           NSString *typeLabel = [NSString stringWithFormat:@"unrecognized type: %lu", theType] ;
